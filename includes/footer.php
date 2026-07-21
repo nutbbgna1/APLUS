@@ -7,17 +7,13 @@
             <i class="fa-solid fa-house"></i>
             <span>Home</span>
         </a>
-        <a href="?page=lessons" class="nav-item <?= in_array($currentPage, ['lessons','lesson']) ? 'active' : '' ?>">
-            <i class="fa-solid fa-table-cells-large"></i>
-            <span>Topic</span>
+        <a href="?page=lessons" class="nav-item <?= in_array($currentPage, ['lessons','lesson','flashcards','reading']) ? 'active' : '' ?>">
+            <i class="fa-solid fa-book"></i>
+            <span>Learn</span>
         </a>
-        <a href="?page=flashcards" class="nav-item <?= $currentPage === 'flashcards' ? 'active' : '' ?>">
-            <i class="fa-solid fa-book-open"></i>
-            <span>Learning</span>
-        </a>
-        <a href="?page=games" class="nav-item <?= in_array($currentPage, ['games','exams','exam']) ? 'active' : '' ?>">
-            <i class="fa-solid fa-gamepad"></i>
-            <span>Practice</span>
+        <a href="?page=leaderboard" class="nav-item <?= $currentPage === 'leaderboard' ? 'active' : '' ?>">
+            <i class="fa-solid fa-crown"></i>
+            <span>Ranking</span>
         </a>
         <a href="?page=profile" class="nav-item <?= $currentPage === 'profile' ? 'active' : '' ?>">
             <i class="fa-solid fa-user"></i>

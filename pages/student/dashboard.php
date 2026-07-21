@@ -11,128 +11,154 @@ $dailyChallenge = getTodayChallenge();
 $dailyDone = isDailyChallengeCompleted($user['id']);
 $db = getDB();
 
-// Recent lessons
-$stmt = $db->prepare("SELECT l.* FROM lessons l ORDER BY l.sort_order LIMIT 3");
+// Recent lesson for "Continue Learning"
+$stmt = $db->prepare("SELECT * FROM lessons ORDER BY sort_order ASC LIMIT 1");
 $stmt->execute();
-$recentLessons = $stmt->fetchAll();
-
-// Recent exams
-$stmt = $db->prepare("SELECT * FROM exams ORDER BY id LIMIT 3");
-$stmt->execute();
-$recentExams = $stmt->fetchAll();
-
-// New badges check
-$newBadges = checkAndAwardBadges($user['id']);
-
-// Cards to review today (flashcard)
-$stmt = $db->prepare("SELECT COUNT(*) as cnt FROM flashcard_progress WHERE user_id = ? AND next_review <= CURDATE()");
-$stmt->execute([$user['id']]);
-$cardsToReview = $stmt->fetch()['cnt'];
-
-// Total vocab
-$stmt = $db->prepare("SELECT COUNT(*) as cnt FROM vocabulary");
-$stmt->execute();
-$totalVocab = $stmt->fetch()['cnt'];
+$currentLesson = $stmt->fetch();
 ?>
 
-<!-- Home Header -->
-<div class="home-header flex justify-between items-center animate-fade-in" style="margin-bottom: 24px; padding-top: 12px;">
-    <div class="flex items-center gap-12">
-        <div class="avatar" style="background:var(--secondary);width:50px;height:50px;font-size:1.5rem;box-shadow:var(--shadow-sm);"><?= mb_substr($user['fname'], 0, 1) ?></div>
-        <div>
-            <div style="font-weight: 800; font-size: 1.1rem; font-family: var(--font-display);">Evening, <?= sanitize($user['nickname']) ?></div>
-            <div style="color:var(--text-secondary); font-size: 0.85rem;">Let's learn more</div>
+<!-- Page Sky-Blue Header Background Wrapper -->
+<div class="home-wrapper" style="margin: -20px -20px 0 -20px; padding: 20px; background: linear-gradient(180deg, #CEF3FF 0%, #EBF9FF 50%, #FFFFFF 100%); min-height: 100vh;">
+
+    <!-- Top Navigation Header -->
+    <div class="home-top-header flex justify-between items-center animate-fade-in" style="margin-bottom: 24px; padding-top: 8px;">
+        <div class="flex items-center gap-12">
+            <div class="avatar" style="background: <?= $user['avatar_color'] ?? '#BDC3C7' ?>; width: 48px; height: 48px; font-size: 1.4rem; font-weight: 900; box-shadow: 0 4px 10px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; border-radius: 50%; color: white;">
+                <?= mb_substr($user['fname'], 0, 1) ?>
+            </div>
+            <div>
+                <div style="font-weight: 800; font-size: 1.15rem; color: #2D3436; font-family: var(--font-display);">Hello, <?= sanitize($user['nickname']) ?></div>
+                <div style="color: #636E72; font-size: 0.85rem; font-weight: 600;">Ready to learn?</div>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-8">
+            <!-- Streak Pill -->
+            <div style="background: white; padding: 8px 14px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); font-weight: 800; display: flex; align-items: center; gap: 6px; font-size: 0.95rem; color: #2D3436;">
+                <span style="font-size: 1.1rem;">🔥</span>
+                <span><?= $streak['current_streak'] ?></span>
+            </div>
+            <!-- Gems/Coins Pill -->
+            <div style="background: white; padding: 8px 14px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); font-weight: 800; display: flex; align-items: center; gap: 6px; font-size: 0.95rem; color: #2D3436;">
+                <span style="font-size: 1.1rem;">💎</span>
+                <span><?= number_format($currentUser['coins'] ?? 250) ?></span>
+            </div>
         </div>
     </div>
-    <div class="streak-badge flex items-center" style="background: var(--surface); padding: 6px 12px; border-radius: 20px; box-shadow: var(--shadow-sm); font-weight: 800; gap: 6px;">
-        <span style="color:#FF5722; font-size: 1.2rem;">🔥</span>
-        <span style="font-size: 1.1rem;"><?= $streak['current_streak'] ?></span>
-    </div>
-</div>
 
-<!-- Hero Banner -->
-<div class="hero-banner animate-fade-in" style="background: linear-gradient(135deg, #4A8CFF 0%, #3B7AE5 100%); border-radius: var(--radius-xl); display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden; margin-bottom: 24px; box-shadow: var(--shadow-lg); min-height: 170px;">
-    
-    <!-- Decorative background blobs -->
-    <div style="position: absolute; top: -30px; right: -20px; width: 150px; height: 150px; background-color: rgba(255, 255, 255, 0.1); border-radius: 50%; z-index: 1;"></div>
-    <div style="position: absolute; bottom: -40px; right: 25%; width: 100px; height: 100px; background-color: rgba(255, 255, 255, 0.15); border-radius: 50%; z-index: 1;"></div>
-
-    <div style="position: relative; z-index: 2; width: 55%; padding: 24px;">
-        <h2 style="font-size: 1.5rem; margin-bottom: 8px; font-weight: 900; line-height: 1.2; color: white;">Howdy partner!</h2>
-        <p style="font-size: 0.95rem; opacity: 0.95; margin-bottom: 16px; font-weight: 600; line-height: 1.4; color: white;">It's time for our periodic test. Ya' ready?</p>
-        <a href="?page=exams" class="btn" style="background: white; color: #4A8CFF; border-radius: var(--radius-lg); padding: 8px 24px; font-weight: 900; font-size: 0.95rem; display: inline-block; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-decoration: none; transition: transform 0.2s;">Start Now</a>
-    </div>
-    
-    <div style="width: 45%; height: 100%; position: absolute; right: 0; bottom: 0; display: flex; align-items: flex-end; justify-content: center; z-index: 2;">
-        <img src="<?= SITE_URL ?>/assets/img/hero_laptop_transparent.png" style="height: 150px; max-width: 100%; object-fit: contain; margin-bottom: -5px;" alt="Hero">
-    </div>
-</div>
-
-<!-- Horizontal Calendar -->
-<div class="calendar-strip flex gap-12 animate-fade-in" style="overflow-x: auto; padding-bottom: 12px; margin-bottom: 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch;">
-    <?php
-    $days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    $todayIndex = date('w');
-    for($i=0; $i<7; $i++) {
-        $isActive = $i == $todayIndex;
-        $date = date('d', strtotime("-".($todayIndex - $i)." days"));
-        echo '
-        <div class="cal-day '.($isActive ? 'active' : '').'" style="min-width: 65px; padding: 14px 10px; border-radius: var(--radius-lg); text-align: center; border: 1px solid var(--border); '.($isActive ? 'background:#4A8CFF; color:white; border:none; box-shadow: 0 8px 16px rgba(74,140,255,0.3);' : 'background:var(--surface);').'">
-            <div style="font-size:0.75rem; font-weight:700; margin-bottom:4px; '.($isActive?'':'color:var(--text-secondary);').'">'.$days[$i].'</div>
-            <div style="font-size:1.3rem; font-weight:900;">'.$date.'</div>
-        </div>';
-    }
-    ?>
-</div>
-<style>
-.calendar-strip::-webkit-scrollbar { display: none; }
-</style>
-
-<!-- Skills Section -->
-<h2 class="animate-fade-in" style="color: #2B4D8A; font-size: 1.5rem; margin-bottom: 16px; font-weight: 900;">Let's Hone Our Skills</h2>
-
-<div class="skills-grid animate-fade-in" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 30px;">
-    
-    <!-- Speaking Practice (tall) -->
-    <a href="?page=lessons" class="skill-card-tall" style="background-color: #FFCD90; border-radius: var(--radius-xl); display: flex; flex-direction: column; justify-content: space-between; text-decoration: none; grid-row: span 2; position: relative; overflow: hidden; box-shadow: 0 6px 12px rgba(255,154,66,0.15); transition: transform 0.2s;">
-        <!-- Orange Curve Background -->
-        <div style="position: absolute; bottom: -5%; left: -10%; width: 120%; height: 80%; background-color: #F58D38; border-radius: 50% 50% 0 0; z-index: 1;"></div>
-        
-        <div style="position: relative; z-index: 2; color: #1A2942; padding: 20px; padding-bottom: 0;">
-            <h3 style="font-size: 1.3rem; font-weight: 900; line-height: 1.1; margin-bottom: 6px;">Speaking<br>Practice</h3>
-            <p style="font-size: 0.85rem; font-weight: 700; opacity: 0.8;">With Elise</p>
+    <!-- Today's XP Progress Card -->
+    <div class="xp-card animate-fade-in" style="background: white; border-radius: 24px; padding: 20px 24px; box-shadow: 0 10px 30px rgba(108, 92, 231, 0.08); margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="flex: 1; padding-right: 16px;">
+            <div style="font-size: 0.9rem; font-weight: 800; color: #2D3436; margin-bottom: 6px;">Today's XP</div>
+            <div style="margin-bottom: 10px;">
+                <span style="color: #6C5CE7; font-weight: 900; font-size: 1.45rem;"><?= $stats['xp'] ?? 120 ?></span>
+                <span style="color: #B2BEC3; font-weight: 800; font-size: 1.05rem;">/ 250 XP</span>
+            </div>
+            <!-- Progress Bar -->
+            <div style="background: #F1F2F6; height: 10px; border-radius: 10px; width: 100%; overflow: hidden;">
+                <div style="background: #6C5CE7; width: <?= min(100, max(10, (($stats['xp'] ?? 120) / 250) * 100)) ?>%; height: 100%; border-radius: 10px; transition: width 0.5s ease;"></div>
+            </div>
         </div>
-        <img src="<?= SITE_URL ?>/assets/img/icon_speaking.png" style="width: 130%; margin-left: -15%; margin-bottom: -25px; position: relative; z-index: 2; margin-top: 10px;" alt="Speaking">
-    </a>
-
-    <!-- Vocab Sprint (wide) -->
-    <a href="?page=flashcards" class="skill-card-wide" style="background-color: #D1E3FF; border-radius: var(--radius-xl); padding: 20px; display: flex; justify-content: space-between; text-decoration: none; position: relative; overflow: hidden; box-shadow: 0 6px 12px rgba(140,179,255,0.15); transition: transform 0.2s;">
-        <!-- Blue Curve Background -->
-        <div style="position: absolute; bottom: -20%; right: -10%; width: 120%; height: 140%; background-color: #95BEFF; border-radius: 100% 0 0 0; z-index: 1;"></div>
         
-        <div style="position: relative; z-index: 2; width: 70%; color: #1A2942;">
-            <h3 style="font-size: 1.2rem; font-weight: 900; line-height: 1.1; margin-bottom: 6px;">Vocab<br>Sprint</h3>
-            <p style="font-size: 0.8rem; font-weight: 700; opacity: 0.8; line-height: 1.2;">Challenge Your Skill</p>
+        <!-- Daily Reward -->
+        <div style="text-align: center; flex-shrink: 0;">
+            <div style="background: #FFF4E6; border-radius: 18px; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; font-size: 1.8rem; box-shadow: 0 4px 12px rgba(255, 168, 38, 0.15);">
+                🎁
+            </div>
+            <div style="font-size: 0.75rem; font-weight: 800; color: #6C5CE7;">Daily Reward</div>
         </div>
-        <img src="<?= SITE_URL ?>/assets/img/icon_vocab.png" style="width: 80px; height: 80px; position: absolute; right: -5px; bottom: -5px; z-index: 2;" alt="Vocab">
-    </a>
+    </div>
 
-    <!-- Practice (wide) -->
-    <a href="?page=practice" class="skill-card-wide" style="background-color: #FFE6F0; border-radius: var(--radius-xl); padding: 20px; display: flex; align-items: center; justify-content: space-between; text-decoration: none; position: relative; overflow: hidden; box-shadow: 0 6px 12px rgba(255,168,197,0.15); transition: transform 0.2s;">
-        <!-- Pink Circle Background -->
-        <div style="position: absolute; top: -20%; right: -10%; width: 80%; height: 140%; background-color: #FFB8CF; border-radius: 50%; z-index: 1;"></div>
-        
-        <h3 style="font-size: 1.2rem; font-weight: 900; position: relative; z-index: 2; color: #1A2942;">Practice</h3>
-        <img src="<?= SITE_URL ?>/assets/img/icon_practice.png" style="width: 70px; height: 70px; position: absolute; right: 5px; top: 50%; transform: translateY(-50%); z-index: 2;" alt="Practice">
-    </a>
-</div>
+    <!-- Motivational Quote Card (Floating Right) -->
+    <div class="quote-card animate-fade-in" style="background: #E8FDF5; border-radius: 20px; padding: 16px 20px; margin-bottom: 24px; width: 75%; margin-left: auto; position: relative; border: 1px solid rgba(46, 213, 115, 0.2); box-shadow: 0 6px 16px rgba(46, 213, 115, 0.08);">
+        <div style="color: #2ED573; font-size: 2.2rem; font-family: Georgia, serif; line-height: 0.8; margin-bottom: 6px; font-weight: bold;">“</div>
+        <div style="font-weight: 700; font-size: 0.88rem; color: #2D3436; line-height: 1.45;">
+            Small steps every day lead to big progress. You've got this!
+        </div>
+        <div style="width: 32px; height: 4px; background: #2ED573; border-radius: 2px; margin-top: 10px;"></div>
+    </div>
 
-<style>
-.skill-card-tall:active, .skill-card-wide:active { transform: scale(0.97); }
-</style>
+    <!-- Continue Learning Section -->
+    <div class="continue-learning-section animate-fade-in" style="margin-bottom: 24px;">
+        <div class="flex justify-between items-center" style="margin-bottom: 12px;">
+            <h2 style="font-size: 1.25rem; font-weight: 800; color: #2D3436; margin: 0;">Continue Learning</h2>
+            <a href="?page=lessons" style="color: #6C5CE7; font-weight: 800; font-size: 0.9rem; text-decoration: none;">View All</a>
+        </div>
+
+        <div style="background: white; border-radius: 20px; padding: 16px 20px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04); display: flex; align-items: center; justify-content: space-between;">
+            <div class="flex items-center gap-14" style="flex: 1;">
+                <div style="background: #FF5252; color: white; border-radius: 16px; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.2rem; flex-shrink: 0; box-shadow: 0 4px 12px rgba(255, 52, 52, 0.3);">
+                    AB
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 900; font-size: 1.05rem; color: #2D3436; margin-bottom: 2px;">
+                        <?= sanitize($currentLesson['title'] ?? 'Greetings 1') ?>
+                    </div>
+                    <div style="font-size: 0.78rem; color: #888; font-weight: 600; margin-bottom: 8px;">
+                        <?= sanitize($currentLesson['description'] ?? 'Say Hello and Get to Know People') ?>
+                    </div>
+                    <!-- Mini Progress Bar -->
+                    <div class="flex items-center gap-8">
+                        <div style="background: #F1F2F6; height: 6px; border-radius: 6px; flex: 1; max-width: 140px; overflow: hidden;">
+                            <div style="background: #6C5CE7; width: 73%; height: 100%; border-radius: 6px;"></div>
+                        </div>
+                        <span style="font-size: 0.75rem; font-weight: 800; color: #6C5CE7;">73%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <a href="?page=lesson&id=<?= $currentLesson['id'] ?? 1 ?>" style="width: 44px; height: 44px; background: #6C5CE7; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4); margin-left: 12px; flex-shrink: 0;">
+                <i class="fa-solid fa-play" style="margin-left: 3px; font-size: 1.1rem;"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Study Topics Section -->
+    <div class="study-topics-section animate-fade-in" style="margin-bottom: 30px;">
+        <div class="flex justify-between items-center" style="margin-bottom: 16px;">
+            <h2 style="font-size: 1.25rem; font-weight: 800; color: #2D3436; margin: 0;">Study Topics</h2>
+            <a href="?page=lessons" style="color: #6C5CE7; font-weight: 800; font-size: 0.9rem; text-decoration: none;">View All</a>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; text-align: center;">
+            <!-- Topic 1: Conversation -->
+            <a href="?page=lessons" style="text-decoration: none;">
+                <div style="background: #E6F9F0; border-radius: 20px; width: 64px; height: 64px; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #2ED573; box-shadow: 0 4px 12px rgba(46, 213, 115, 0.15); transition: transform 0.2s;">
+                    <i class="fa-solid fa-comment-dots"></i>
+                </div>
+                <div style="font-size: 0.78rem; font-weight: 800; color: #2D3436;">Conversation</div>
+            </a>
+
+            <!-- Topic 2: Vocabulary -->
+            <a href="?page=flashcards" style="text-decoration: none;">
+                <div style="background: #E8F4FE; border-radius: 20px; width: 64px; height: 64px; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #38BDF8; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15); transition: transform 0.2s;">
+                    <i class="fa-solid fa-book"></i>
+                </div>
+                <div style="font-size: 0.78rem; font-weight: 800; color: #2D3436;">Vocabulary</div>
+            </a>
+
+            <!-- Topic 3: Listening -->
+            <a href="?page=reading" style="text-decoration: none;">
+                <div style="background: #FFF8E7; border-radius: 20px; width: 64px; height: 64px; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #FFB347; box-shadow: 0 4px 12px rgba(255, 179, 71, 0.15); transition: transform 0.2s;">
+                    <i class="fa-solid fa-headphones"></i>
+                </div>
+                <div style="font-size: 0.78rem; font-weight: 800; color: #2D3436;">Listening</div>
+            </a>
+
+            <!-- Topic 4: Grammar -->
+            <a href="?page=exams" style="text-decoration: none;">
+                <div style="background: #FDEDF0; border-radius: 20px; width: 64px; height: 64px; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #FF6B81; box-shadow: 0 4px 12px rgba(255, 107, 129, 0.15); transition: transform 0.2s;">
+                    <i class="fa-solid fa-pen-nib"></i>
+                </div>
+                <div style="font-size: 0.78rem; font-weight: 800; color: #2D3436;">Grammar</div>
+            </a>
+        </div>
+    </div>
+
+</div><!-- /.home-wrapper -->
 
 <?php
-// Show new badge notifications
+// Show new badge notifications if any
 if (!empty($newBadges)):
 ?>
 <script>
