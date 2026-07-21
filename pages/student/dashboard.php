@@ -18,7 +18,7 @@ $currentLesson = $stmt->fetch();
 ?>
 
 <!-- Page Sky-Blue Header Background Wrapper -->
-<div class="home-wrapper" style="margin: -20px -20px 0 -20px; padding: 20px; background: linear-gradient(180deg, #ABE9FF 0%, #D4F4FF 40%, #F5FCFF 100%); min-height: 100vh;">
+<div class="home-wrapper" style="margin: 0 -16px 0 -16px; padding: 20px; background: linear-gradient(180deg, #ABE9FF 0%, #D4F4FF 40%, #F5FCFF 100%); min-height: 100vh;">
 
     <!-- Top Navigation Header -->
     <div class="home-top-header flex justify-between items-center animate-fade-in" style="margin-bottom: 20px; padding-top: 4px;">

@@ -908,6 +908,8 @@ select.input-field {
   .header-stats { display: flex !important; }
 }
 @media (max-width: 767px) {
+  .header { display: none !important; }
+  .page { padding-top: 0 !important; }
   .desktop-nav { display: none !important; }
   .header-stats { display: none !important; }
   .game-grid { grid-template-columns: repeat(3, 1fr); }
