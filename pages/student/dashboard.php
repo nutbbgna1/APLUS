@@ -77,7 +77,7 @@ $currentLesson = $stmt->fetch();
 
         <!-- Left: Mascot Dog Character -->
         <div style="position: relative; z-index: 2; width: 45%; display: flex; justify-content: center; align-items: flex-end; margin-left: -10px;">
-            <img src="<?= SITE_URL ?>/assets/img/mascot_dog_transparent.png" style="width: 175px; max-width: 130%; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.15)); margin-bottom: -22px;" alt="Mascot Dog">
+            <img src="<?= SITE_URL ?>/assets/img/mascot_dog.png" style="width: 175px; max-width: 130%; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.15)); margin-bottom: -22px;" alt="Mascot Dog">
         </div>
 
         <!-- Right: Quote Card Floating -->
