@@ -3,6 +3,17 @@ $action = $_GET['action'] ?? 'list';
 $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 $errorMsg = '';
 
+// Auto-migrate: Add access_mode column if it doesn't exist
+try {
+    $db->query("SELECT access_mode FROM exams LIMIT 1");
+} catch (Exception $e) {
+    try {
+        $db->exec("ALTER TABLE exams ADD COLUMN access_mode ENUM('public', 'restricted', 'locked') DEFAULT 'restricted'");
+    } catch (Exception $ex) {
+        $errorMsg = "Database migration failed: " . $ex->getMessage();
+    }
+}
+
 // Fetch categories for dropdown
 $stmt = $db->query("SELECT name FROM course_categories ORDER BY id ASC");
 $subjects = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -28,13 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $lesson_id = !empty($_POST['lesson_id']) ? (int)$_POST['lesson_id'] : null;
             $time_minutes = (int)($_POST['time_minutes'] ?? 30);
             $total_questions = (int)($_POST['total_questions'] ?? 20);
+            $access_mode = $_POST['access_mode'] ?? 'restricted';
             
             if ($action === 'edit' && $id) {
-                $stmt = $db->prepare("UPDATE exams SET title=?, unit=?, level=?, subject=?, lesson_id=?, time_minutes=?, total_questions=? WHERE id=?");
-                $stmt->execute([$title, $unit, $level, $subject, $lesson_id, $time_minutes, $total_questions, $id]);
+                $stmt = $db->prepare("UPDATE exams SET title=?, unit=?, level=?, subject=?, lesson_id=?, time_minutes=?, total_questions=?, access_mode=? WHERE id=?");
+                $stmt->execute([$title, $unit, $level, $subject, $lesson_id, $time_minutes, $total_questions, $access_mode, $id]);
             } else {
-                $stmt = $db->prepare("INSERT INTO exams (title, unit, level, subject, lesson_id, time_minutes, total_questions) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$title, $unit, $level, $subject, $lesson_id, $time_minutes, $total_questions]);
+                $stmt = $db->prepare("INSERT INTO exams (title, unit, level, subject, lesson_id, time_minutes, total_questions, access_mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$title, $unit, $level, $subject, $lesson_id, $time_minutes, $total_questions, $access_mode]);
             }
             echo "<script>window.location.href='?page=exams';</script>";
             exit;
@@ -117,6 +129,17 @@ if ($action === 'edit' || $action === 'add'):
                     <input type="number" name="total_questions" required value="<?= htmlspecialchars($item['total_questions'] ?? 20) ?>" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px;">
                 </div>
             </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <label style="display:block; font-weight: 600; margin-bottom: 8px;">Access Mode</label>
+                    <select name="access_mode" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px;">
+                        <option value="public" <?= ($item['access_mode'] ?? '') === 'public' ? 'selected' : '' ?>>🟢 Public (Open to everyone)</option>
+                        <option value="restricted" <?= ($item['access_mode'] ?? 'restricted') === 'restricted' ? 'selected' : '' ?>>🟡 Restricted (Requires permission)</option>
+                        <option value="locked" <?= ($item['access_mode'] ?? '') === 'locked' ? 'selected' : '' ?>>🔴 Locked (Closed for all)</option>
+                    </select>
+                </div>
+            </div>
             
             <div style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 20px;">
                 <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Save Exam Setup</button>
@@ -146,6 +169,7 @@ if ($action === 'edit' || $action === 'add'):
                     <th>Level</th>
                     <th>Time Limit</th>
                     <th>Questions Count</th>
+                    <th>Access Mode</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -159,6 +183,15 @@ if ($action === 'edit' || $action === 'add'):
                     <td><?= $item['time_minutes'] ?> mins</td>
                     <td>
                         <span style="font-size: 0.85rem; font-weight: 600; color: <?= $item['q_count'] < $item['total_questions'] ? 'var(--danger)' : 'var(--success)' ?>;"><?= $item['q_count'] ?> / <?= $item['total_questions'] ?> items</span>
+                    </td>
+                    <td>
+                        <?php if ($item['access_mode'] === 'public'): ?>
+                            <span style="background: #DCFCE7; color: #16A34A; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">🟢 Public</span>
+                        <?php elseif ($item['access_mode'] === 'locked'): ?>
+                            <span style="background: #FEE2E2; color: #DC2626; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">🔴 Locked</span>
+                        <?php else: ?>
+                            <span style="background: #FEF3C7; color: #D97706; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">🟡 Restricted</span>
+                        <?php endif; ?>
                     </td>
                     <td>
                         <a href="?page=exam_questions&exam_id=<?= $item['id'] ?>" class="btn btn-sm btn-primary" style="margin-right: 5px;" title="Manage Questions"><i class="fa-solid fa-list-check"></i> Questions</a>

@@ -33,9 +33,9 @@ $students = $stmt->fetchAll();
     <table>
         <thead>
             <tr>
-                <th>ID</th>
-                <th>Name / Username</th>
-                <th>Email</th>
+                <th style="width: 50px;">#</th>
+                <th>Name (Nickname)</th>
+                <th>Student Code</th>
                 <th>Role</th>
                 <th>Status</th>
                 <th>Registered Date</th>
@@ -43,18 +43,22 @@ $students = $stmt->fetchAll();
             </tr>
         </thead>
         <tbody>
-            <?php foreach($students as $u): ?>
+            <?php $seq = 1; foreach($students as $u): ?>
             <tr>
-                <td>#<?= $u['id'] ?></td>
+                <td><?= $seq++ ?></td>
                 <td>
                     <div style="display:flex;align-items:center;gap:10px;">
-                        <div style="width:36px;height:36px;background:var(--primary-light);color:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;">
-                            <?= strtoupper(substr($u['username'], 0, 1)) ?>
+                        <div style="width:36px;height:36px;background:<?= htmlspecialchars($u['avatar_color'] ?? 'var(--primary-light)') ?>;color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">
+                            <?= strtoupper(substr($u['fname'] ?? $u['username'] ?? 'U', 0, 1)) ?>
                         </div> 
-                        <strong><?= htmlspecialchars($u['username']) ?></strong>
+                        <strong><?= htmlspecialchars(trim(($u['fname'] ?? '') . ' ' . ($u['lname'] ?? ''))) ?: htmlspecialchars($u['username'] ?? '') ?> 
+                        <?php if(!empty($u['nickname'])): ?>
+                            <span style="color: var(--text-muted); font-weight: normal;">(<?= htmlspecialchars($u['nickname']) ?>)</span>
+                        <?php endif; ?>
+                        </strong>
                     </div>
                 </td>
-                <td><?= htmlspecialchars($u['email']) ?></td>
+                <td><span style="background: #F1F5F9; font-family: monospace; padding: 4px 8px; border-radius: 6px; border: 1px solid #E2E8F0;"><?= htmlspecialchars($u['code'] ?? $u['email'] ?? '-') ?></span></td>
                 <td><span style="background: #F1F5F9; color: #475569; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;"><?= ucfirst($u['role']) ?></span></td>
                 <td><span style="background:#DCFCE7;color:#16A34A;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">Active</span></td>
                 <td><?= date('d M Y', strtotime($u['created_at'])) ?></td>

@@ -1,4 +1,19 @@
 <?php
+if (!isset($_SESSION['admin_logged_in'])) {
+    die("Unauthorized Access");
+}
+
+// Handle Delete
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_log') {
+    $log_id = intval($_POST['log_id']);
+    if ($log_id > 0) {
+        $stmt = $db->prepare("DELETE FROM accounting_logs WHERE id = ?");
+        $stmt->execute([$log_id]);
+        echo "<script>window.location.href='?page=accounting';</script>";
+        exit;
+    }
+}
+
 // Calculate Totals
 $stmt = $db->query("SELECT SUM(amount) as total_income FROM accounting_logs WHERE type = 'income'");
 $total_income = $stmt->fetchColumn() ?: 0;
@@ -72,6 +87,7 @@ $logs = $stmt->fetchAll();
                 <th style="padding: 12px; color: var(--text-muted);">Ref Order</th>
                 <th style="padding: 12px; color: var(--text-muted); text-align: right;">Amount</th>
                 <th style="padding: 12px; color: var(--text-muted);">Type</th>
+                <th style="padding: 12px; color: var(--text-muted); text-align: right;">Action</th>
             </tr>
         </thead>
         <tbody>
@@ -92,10 +108,19 @@ $logs = $stmt->fetchAll();
                         <span style="background:#FEE2E2;color:#DC2626;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">Expense</span>
                     <?php endif; ?>
                 </td>
+                <td style="padding: 12px; text-align: right;">
+                    <form method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this transaction? It cannot be undone.');">
+                        <input type="hidden" name="action" value="delete_log">
+                        <input type="hidden" name="log_id" value="<?= $log['id'] ?>">
+                        <button type="submit" class="btn btn-sm" style="background: #FEE2E2; color: #DC2626; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: 0.2s;">
+                            <i class="fa-solid fa-trash-can"></i> ลบ
+                        </button>
+                    </form>
+                </td>
             </tr>
             <?php endforeach; ?>
             <?php if(empty($logs)): ?>
-            <tr><td colspan="5" style="text-align: center; padding: 20px;">No transactions recorded yet.</td></tr>
+            <tr><td colspan="6" style="text-align: center; padding: 20px;">No transactions recorded yet.</td></tr>
             <?php endif; ?>
         </tbody>
     </table>

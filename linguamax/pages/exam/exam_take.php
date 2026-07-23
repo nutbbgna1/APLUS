@@ -13,18 +13,32 @@ $stmt->execute([$examId]);
 $exam = $stmt->fetch();
 if (!$exam) { header('Location: index.php?page=exams'); exit; }
 
+// Check Access Mode Permissions
+$userId = $_SESSION['user_id'];
+$accessMode = $exam['access_mode'] ?? 'restricted';
+if ($accessMode === 'locked') {
+    die("This exam is currently locked and unavailable.");
+} elseif ($accessMode === 'restricted') {
+    $permStmt = $db->prepare("SELECT 1 FROM exam_permissions WHERE user_id = ? AND exam_id = ?");
+    $permStmt->execute([$userId, $examId]);
+    if (!$permStmt->fetch()) {
+        header('Location: index.php?page=exams&error=access_denied');
+        exit;
+    }
+}
+
 // Get questions for this exam
-$stmt = $db->prepare("SELECT * FROM questions WHERE exam_id = ? ORDER BY RAND() LIMIT ?");
+$stmt = $db->prepare("SELECT * FROM exam_questions WHERE exam_id = ? ORDER BY sort_order ASC, RAND() LIMIT ?");
 $stmt->execute([$examId, $exam['total_questions']]);
 $questions = $stmt->fetchAll();
 
-// If not enough questions from this exam, supplement with level-matched questions
+// If not enough questions from this exam, supplement with random fallback questions from exam_questions
 if (count($questions) < $exam['total_questions']) {
     $needed = $exam['total_questions'] - count($questions);
     $existingIds = array_column($questions, 'id');
     $placeholders = !empty($existingIds) ? implode(',', array_fill(0, count($existingIds), '?')) : '0';
-    $stmt = $db->prepare("SELECT * FROM questions WHERE level = ? AND id NOT IN ($placeholders) ORDER BY RAND() LIMIT ?");
-    $params = array_merge([$exam['level']], $existingIds, [$needed]);
+    $stmt = $db->prepare("SELECT * FROM exam_questions WHERE id NOT IN ($placeholders) ORDER BY RAND() LIMIT ?");
+    $params = array_merge($existingIds, [$needed]);
     $stmt->execute($params);
     $questions = array_merge($questions, $stmt->fetchAll());
 }
@@ -65,7 +79,8 @@ if (count($questions) < $exam['total_questions']) {
         .hint-text { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
         .hint-text i { color: var(--primary); font-size: 1rem; }
         
-        .question-text { font-size: 1.4rem; font-weight: 700; color: var(--text-main); margin-bottom: 32px; line-height: 1.4; }
+        .question-text { font-size: 1.15rem; font-weight: 500; color: var(--text-main); margin-bottom: 24px; line-height: 1.5; }
+        .question-image { max-width: 100%; border-radius: 12px; margin-bottom: 24px; display: none; object-fit: contain; }
         
         .options-list { display: flex; flex-direction: column; gap: 12px; }
         .option-btn { background: var(--card-bg); border: 2px solid transparent; border-radius: 16px; padding: 16px; display: flex; align-items: center; gap: 16px; cursor: pointer; transition: all 0.2s; text-align: left; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
@@ -121,6 +136,7 @@ if (count($questions) < $exam['total_questions']) {
         <i class="fa-regular fa-lightbulb"></i>
         <span id="hintText">Question context</span>
     </div>
+    <img id="questionImage" class="question-image" src="" alt="Question Image">
     <div id="questionText" class="question-text">Loading...</div>
     
     <div class="options-list" id="optionsList">
@@ -148,9 +164,10 @@ let selectedIndex = -1;
 let isAnswerChecked = false;
 let correctCount = 0;
 let timeSpent = 0;
+let userAnswers = [];
 
 const letters = ['A', 'B', 'C', 'D'];
-const choiceKeys = ['choice_a', 'choice_b', 'choice_c', 'choice_d'];
+const choiceKeys = ['choice_1', 'choice_2', 'choice_3', 'choice_4'];
 
 function renderQuestion() {
     isAnswerChecked = false;
@@ -168,9 +185,25 @@ function renderQuestion() {
     document.getElementById('progressBar').style.width = `${((currentQIndex) / examData.questions.length) * 100}%`;
     
     // Optional Hint from exam title or question logic
-    document.getElementById('hintText').textContent = `<?= sanitize($exam['title']) ?> - ${q.level.charAt(0).toUpperCase() + q.level.slice(1)}`;
+    document.getElementById('hintText').textContent = `<?= sanitize($exam['title']) ?>`;
     
-    document.getElementById('questionText').textContent = q.question_text;
+    const questionImage = document.getElementById('questionImage');
+    const questionText = document.getElementById('questionText');
+
+    if (q.image_path) {
+        questionImage.src = '../' + q.image_path;
+        questionImage.style.display = 'block';
+    } else {
+        questionImage.src = '';
+        questionImage.style.display = 'none';
+    }
+
+    if (q.question_text) {
+        questionText.innerHTML = q.question_text.replace(/\n/g, '<br>');
+        questionText.style.display = 'block';
+    } else {
+        questionText.style.display = 'none';
+    }
     
     const optionsHtml = choiceKeys.map((key, index) => {
         if(!q[key]) return '';
@@ -204,9 +237,20 @@ function checkAnswer() {
     isAnswerChecked = true;
     
     const q = examData.questions[currentQIndex];
-    const isCorrect = selectedIndex === q.correct_answer;
+    const isCorrect = selectedIndex == q.correct_answer;
     
     if (isCorrect) correctCount++;
+    
+    // Store answer tracking
+    userAnswers.push({
+        question_id: q.id,
+        question_text: q.question_text,
+        selected_choice: selectedIndex,
+        selected_text: q[choiceKeys[selectedIndex]],
+        correct_choice: q.correct_answer,
+        correct_text: q[choiceKeys[q.correct_answer]],
+        is_correct: isCorrect
+    });
     
     // Style options
     document.querySelectorAll('.option-btn').forEach(opt => opt.classList.remove('unanswered', 'selected'));
@@ -260,7 +304,7 @@ async function submitExam() {
                 total: examData.questions.length,
                 percentage: pct,
                 time_spent: timeSpent,
-                answers: [] // Simplified for now since we just check immediately
+                answers: userAnswers
             })
         });
         const result = await response.json();

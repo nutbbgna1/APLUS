@@ -18,14 +18,18 @@ $user = $currentUser;
 
     <!-- Form -->
     <div style="background: white; border-radius: 24px; padding: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); margin-top: -10px;">
-        <div style="text-align: center; margin-bottom: 24px;">
-            <div style="width: 80px; height: 80px; border-radius: 50%; background: #E2E8F0; display: inline-flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 900; color: white; margin-bottom: 12px;">
-                <?= mb_substr($user['fname'], 0, 1) ?>
-            </div>
-            <div style="color: #4A8CFF; font-weight: 700; font-size: 0.9rem;">Change Avatar</div>
+        <form id="profileForm" onsubmit="saveProfile(event)">
+        <div style="text-align: center; margin-bottom: 24px; position: relative;">
+            <input type="file" id="profile_pic" name="profile_pic" accept="image/*" style="display: none;" onchange="previewImage(event)">
+            <label for="profile_pic" style="cursor: pointer; display: inline-block;">
+                <div id="avatarPreview" style="width: 80px; height: 80px; border-radius: 50%; background: <?= !empty($user['profile_pic']) ? 'url(\'../assets/uploads/profiles/' . htmlspecialchars($user['profile_pic']) . '\') center/cover' : htmlspecialchars($user['avatar_color'] ?? '#E2E8F0') ?>; display: inline-flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 900; color: white; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 3px solid white;">
+                    <?= empty($user['profile_pic']) ? mb_substr($user['fname'], 0, 1) : '' ?>
+                </div>
+                <div style="color: #4A8CFF; font-weight: 700; font-size: 0.9rem; background: #F1F5F9; padding: 6px 16px; border-radius: 20px; display: inline-block;"><i class="fa-solid fa-camera"></i> Change Avatar</div>
+            </label>
         </div>
 
-        <form id="profileForm" onsubmit="saveProfile(event)">
+
             <div style="margin-bottom: 16px;">
                 <label style="display: block; font-weight: 700; color: #1E293B; margin-bottom: 8px;">First Name</label>
                 <input type="text" name="fname" value="<?= sanitize($user['fname']) ?>" required style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid #E2E8F0; font-size: 1rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='#8CB3FF'" onblur="this.style.borderColor='#E2E8F0'">
@@ -49,6 +53,18 @@ $user = $currentUser;
 </div>
 
 <script>
+function previewImage(event) {
+    const reader = new FileReader();
+    reader.onload = function() {
+        const preview = document.getElementById('avatarPreview');
+        preview.style.background = `url('${reader.result}') center/cover`;
+        preview.innerHTML = ''; // clear initial letter
+    }
+    if(event.target.files[0]) {
+        reader.readAsDataURL(event.target.files[0]);
+    }
+}
+
 async function saveProfile(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
@@ -56,14 +72,12 @@ async function saveProfile(e) {
     btn.textContent = 'Saving...';
 
     const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
-    data.action = 'update_profile';
+    formData.append('action', 'update_profile');
 
     try {
         const res = await fetch('<?= SITE_URL ?>/api/user.php', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
+            body: formData
         });
         const result = await res.json();
         if (result.success) {

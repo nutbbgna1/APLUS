@@ -43,10 +43,8 @@ $progressPercent = min(100, max(0, ($currentXp / $maxXp) * 100));
     <!-- User Info Card -->
     <div style="background: white; border: 1px solid #F1F5F9; border-radius: 24px; padding: 20px; margin-bottom: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); display: flex; align-items: center; gap: 20px;">
         <!-- Avatar -->
-        <div style="width: 76px; height: 76px; border-radius: 50%; background: #E2E8F0; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 900; color: white; flex-shrink: 0; overflow: hidden;">
-            <?php if (!empty($user['avatar'])): ?>
-                <img src="<?= SITE_URL ?>/assets/img/<?= $user['avatar'] ?>" style="width: 100%; height: 100%; object-fit: cover;">
-            <?php else: ?>
+        <div style="width: 76px; height: 76px; border-radius: 50%; background: <?= !empty($user['profile_pic']) ? 'url(\'' . SITE_URL . '/assets/uploads/profiles/' . htmlspecialchars($user['profile_pic']) . '\') center/cover' : htmlspecialchars($user['avatar_color'] ?? '#E2E8F0') ?>; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 900; color: white; flex-shrink: 0; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <?php if (empty($user['profile_pic'])): ?>
                 <?= mb_substr($user['fname'], 0, 1) ?>
             <?php endif; ?>
         </div>
@@ -109,6 +107,25 @@ $progressPercent = min(100, max(0, ($currentXp / $maxXp) * 100));
     $stmt->execute([$userId]);
     $my_enrollments = $stmt->fetchAll();
     ?>
+    <!-- Survey Widget -->
+    <?php
+    $stmtSurvey = $db->prepare("SELECT id FROM user_surveys WHERE user_id = ?");
+    $stmtSurvey->execute([$userId]);
+    $hasSurvey = $stmtSurvey->fetch();
+    if (!$hasSurvey):
+    ?>
+        <div style="background: linear-gradient(135deg, #FFB627, #FF9F00); border-radius: 20px; padding: 24px; margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 10px 25px rgba(255, 182, 39, 0.3); color: white; position: relative; overflow: hidden;">
+            <div style="position: absolute; right: -20px; top: -20px; font-size: 8rem; opacity: 0.1; pointer-events: none;">🚀</div>
+            <div>
+                <h3 style="font-family: 'Itim', cursive; font-size: 1.5rem; margin: 0 0 8px 0; text-shadow: 1px 1px 0 rgba(0,0,0,0.1);">ภารกิจนักสำรวจแห่งการเรียนรู้</h3>
+                <p style="font-family: 'Mali', cursive; margin: 0; font-size: 0.95rem; opacity: 0.9;">มาช่วยครูออกแบบเว็บไซต์กันเถอะ! รับฟรี 50 XP เมื่อทำเสร็จ</p>
+            </div>
+            <a href="?page=survey" class="btn" style="background: white; color: #FF9F00; font-family: 'Itim', cursive; border: none; padding: 12px 24px; border-radius: 50px; text-decoration: none; font-size: 1.1rem; box-shadow: 0 4px 0 rgba(0,0,0,0.1); flex-shrink: 0; transition: transform 0.2s;">
+                เริ่มภารกิจ! <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+    <?php endif; ?>
+
     <div style="margin-bottom: 32px;">
         <h2 style="font-size: 1.4rem; font-weight: 900; color: #1E293B; margin: 0 0 16px 0;">My Courses & Status</h2>
         

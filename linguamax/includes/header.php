@@ -65,8 +65,8 @@ $streak = isLoggedIn() ? getStreak($_SESSION['user_id']) : ['current_streak' => 
         <?php endif; ?>
 
         <a href="?page=<?= isAdmin() ? 'logout' : 'profile' ?>" class="user-pill">
-            <div class="avatar" style="background: <?= $currentUser['avatar_color'] ?? '#6C63FF' ?>">
-                <?= mb_substr($currentUser['fname'] ?? 'A', 0, 1) ?>
+            <div class="avatar" style="background: <?= !empty($currentUser['profile_pic']) ? 'url(\'' . SITE_URL . '/assets/uploads/profiles/' . htmlspecialchars($currentUser['profile_pic']) . '\') center/cover' : htmlspecialchars($currentUser['avatar_color'] ?? '#6C63FF') ?>; color: <?= !empty($currentUser['profile_pic']) ? 'transparent' : 'white' ?>;">
+                <?= empty($currentUser['profile_pic']) ? mb_substr($currentUser['fname'] ?? 'A', 0, 1) : '' ?>
             </div>
             <?= $currentUser['nickname'] ?? 'Admin' ?>
         </a>

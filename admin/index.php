@@ -16,7 +16,7 @@ $db = getDB();
 $allowed_pages = [
     'dashboard', 'courses', 'course_edit', 'categories', 'orders', 
     'students', 'pos', 'lessons', 'vocabulary', 
-    'reading', 'minigames', 'exams', 'exam_questions', 'payment_settings', 'accounting', 'search', 'logout', 'set_lang', 'read_all'
+    'reading', 'minigames', 'exams', 'exam_questions', 'exam_permissions', 'payment_settings', 'api_settings', 'accounting', 'search', 'logout', 'set_lang', 'read_all', 'surveys'
 ];
 
 if (!in_array($page, $allowed_pages)) {

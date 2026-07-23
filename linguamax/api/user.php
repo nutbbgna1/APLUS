@@ -18,23 +18,52 @@ $userId = $_SESSION['user_id'];
 
 switch ($action) {
     case 'update_profile':
-        $fname = trim($input['fname'] ?? '');
-        $lname = trim($input['lname'] ?? '');
-        $nickname = trim($input['nickname'] ?? '');
-        $password = trim($input['password'] ?? '');
+        $fname = trim($_POST['fname'] ?? $input['fname'] ?? '');
+        $lname = trim($_POST['lname'] ?? $input['lname'] ?? '');
+        $nickname = trim($_POST['nickname'] ?? $input['nickname'] ?? '');
+        $password = trim($_POST['password'] ?? $input['password'] ?? '');
 
         if (!$fname || !$lname || !$nickname) {
             jsonResponse(['error' => 'Missing required fields'], 400);
         }
 
-        try {
-            if ($password) {
-                $stmt = $db->prepare("UPDATE users SET fname=?, lname=?, nickname=?, password=? WHERE id=?");
-                $stmt->execute([$fname, $lname, $nickname, password_hash($password, PASSWORD_DEFAULT), $userId]);
+        $profilePicPath = null;
+        if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['error'] === UPLOAD_ERR_OK) {
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+            // Also check mime type using finfo if possible, but basic type check is okay for now
+            if (in_array($_FILES['profile_pic']['type'], $allowedTypes)) {
+                $ext = pathinfo($_FILES['profile_pic']['name'], PATHINFO_EXTENSION);
+                if (empty($ext)) $ext = 'jpg';
+                $newFilename = 'user_' . $userId . '_' . time() . '.' . $ext;
+                $uploadDir = __DIR__ . '/../../assets/uploads/profiles/';
+                
+                if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $uploadDir . $newFilename)) {
+                    $profilePicPath = $newFilename;
+                }
             } else {
-                $stmt = $db->prepare("UPDATE users SET fname=?, lname=?, nickname=? WHERE id=?");
-                $stmt->execute([$fname, $lname, $nickname, $userId]);
+                jsonResponse(['error' => 'Invalid file type. Only JPG, PNG, WEBP, GIF are allowed.'], 400);
             }
+        }
+
+        try {
+            $params = [$fname, $lname, $nickname];
+            $sql = "UPDATE users SET fname=?, lname=?, nickname=?";
+            
+            if ($password) {
+                $sql .= ", password=?";
+                $params[] = password_hash($password, PASSWORD_DEFAULT);
+            }
+            if ($profilePicPath) {
+                $sql .= ", profile_pic=?";
+                $params[] = $profilePicPath;
+            }
+            
+            $sql .= " WHERE id=?";
+            $params[] = $userId;
+            
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+
             jsonResponse(['success' => true]);
         } catch (Exception $e) {
             jsonResponse(['error' => 'Database error: ' . $e->getMessage()], 500);

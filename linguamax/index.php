@@ -91,6 +91,10 @@ switch ($page) {
         requireLogin();
         include __DIR__ . '/pages/student/profile.php';
         break;
+    case 'survey':
+        requireLogin();
+        include __DIR__ . '/pages/student/survey.php';
+        break;
     case 'edit-profile':
         requireLogin();
         include __DIR__ . '/pages/student/edit_profile.php';

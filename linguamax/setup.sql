@@ -23,6 +23,7 @@ CREATE TABLE users (
     xp INT DEFAULT 0,
     coins INT DEFAULT 0,
     avatar_color VARCHAR(7) DEFAULT '#6C63FF',
+    profile_pic VARCHAR(255) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
@@ -130,6 +131,15 @@ CREATE TABLE exam_results (
     completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ── USER SURVEYS (Kids Survey) ──────────────────────────────
+CREATE TABLE user_surveys (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    answers_json JSON NOT NULL,
+    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- ── DAILY CHALLENGES ────────────────────────────────────────

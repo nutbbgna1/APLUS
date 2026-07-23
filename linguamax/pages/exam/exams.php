@@ -48,10 +48,12 @@ $completedIdsStmt = $db->prepare("SELECT DISTINCT exam_id FROM exam_results WHER
 $completedIdsStmt->execute([$userId]);
 $completedExamIds = $completedIdsStmt->fetchAll(PDO::FETCH_COLUMN);
 
-// Determine "Active" exam (first granted exam that is not completed)
+// Determine "Active" exam (first granted or public exam that is not completed)
 $activeExamId = null;
 foreach ($exams as $e) {
-    if (in_array($e['id'], $grantedExams) && !in_array($e['id'], $completedExamIds)) {
+    $am = $e['access_mode'] ?? 'restricted';
+    $canAccess = ($am === 'public') || ($am === 'restricted' && in_array($e['id'], $grantedExams));
+    if ($am !== 'locked' && $canAccess && !in_array($e['id'], $completedExamIds)) {
         $activeExamId = $e['id'];
         break;
     }
@@ -115,16 +117,17 @@ foreach ($exams as $e) {
             
             <div class="flex-col gap-12">
                 <?php foreach ($unitExams as $e): 
-                    $hasPermission = in_array($e['id'], $grantedExams);
+                    $am = $e['access_mode'] ?? 'restricted';
+                    $hasPermission = ($am === 'public') || ($am === 'restricted' && in_array($e['id'], $grantedExams));
                     $isCompleted = in_array($e['id'], $completedExamIds);
                     
                     $status = 'locked';
-                    if ($isCompleted) {
+                    if ($am === 'locked') {
+                        $status = 'locked';
+                    } elseif ($isCompleted) {
                         $status = 'completed';
-                    } elseif ($hasPermission && $e['id'] === $activeExamId) {
-                        $status = 'active';
                     } elseif ($hasPermission) {
-                        $status = 'active'; // Allow testing any granted exam if wanted
+                        $status = 'active'; 
                     }
                     
                     // Status-based styling
