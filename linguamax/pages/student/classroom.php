@@ -84,7 +84,7 @@ $grades = ['ทั้งหมด', 'ป.4', 'ป.5', 'ป.6', 'ม.1', 'ม.2',
             <a href="?page=classroom-view&id=<?= $mc['course_id'] ?>" style="flex: 0 0 240px; background: white; border-radius: 20px; border: 1px solid var(--border); overflow: hidden; text-decoration: none; box-shadow: var(--shadow-sm); transition: 0.3s; display: block;">
                 <div style="width: 100%; height: 140px; background: #F1F5F9; position: relative;">
                     <?php if ($mc['image_url']): ?>
-                        <img src="<?= SITE_URL ?>/../<?= htmlspecialchars($mc['image_url']) ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                        <img src="<?= SITE_URL ?>/<?= htmlspecialchars($mc['image_url']) ?>" style="width: 100%; height: 100%; object-fit: cover;">
                     <?php else: ?>
                         <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #E0E7FF, #C7D2FE); color: #6366F1; font-size: 2.5rem; font-weight: 900;"><?= mb_substr($mc['category'], 0, 1) ?></div>
                     <?php endif; ?>
@@ -136,7 +136,7 @@ $grades = ['ทั้งหมด', 'ป.4', 'ป.5', 'ป.6', 'ม.1', 'ม.2',
                     <!-- Course Image -->
                     <div style="width: 100%; height: 150px; background: linear-gradient(135deg, #E0E7FF, #C7D2FE); position: relative;">
                         <?php if ($c['image_url']): ?>
-                            <img src="<?= SITE_URL ?>/../<?= htmlspecialchars($c['image_url']) ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                            <img src="<?= SITE_URL ?>/<?= htmlspecialchars($c['image_url']) ?>" style="width: 100%; height: 100%; object-fit: cover;">
                         <?php else: ?>
                             <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color: #6366F1; font-size: 3rem; font-weight: 900; font-family: var(--font-display);"><?= mb_substr($c['category'], 0, 1) ?></div>
                         <?php endif; ?>

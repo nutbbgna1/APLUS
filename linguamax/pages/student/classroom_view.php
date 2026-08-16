@@ -154,7 +154,7 @@ if (isset($_GET['success'])) {
         <div style="background: white; border-radius: 20px; overflow: hidden; box-shadow: var(--shadow-sm); margin-bottom: 20px;">
             <div style="width: 100%; height: 200px; background: linear-gradient(135deg, #E0E7FF, #C7D2FE); position: relative;">
                 <?php if ($course['image_url']): ?>
-                    <img src="<?= SITE_URL ?>/../<?= htmlspecialchars($course['image_url']) ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                    <img src="<?= SITE_URL ?>/<?= htmlspecialchars($course['image_url']) ?>" style="width: 100%; height: 100%; object-fit: cover;">
                 <?php else: ?>
                     <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color: #6366F1; font-size: 3.5rem; font-weight: 900;"><?= mb_substr($subject, 0, 1) ?></div>
                 <?php endif; ?>
@@ -346,7 +346,7 @@ if (isset($_GET['success'])) {
                         <div style="font-size: 0.75rem; color: #94A3B8; font-weight: 600;">EP <?= $mat['episode_number'] ?> • <?= $mat['size_mb'] ?> MB</div>
                     </div>
                 </div>
-                <a href="<?= SITE_URL ?>/../<?= htmlspecialchars($mat['file_url']) ?>" download target="_blank" style="background: #F1F5F9; color: #1E293B; padding: 8px 12px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; text-decoration: none;">Download</a>
+                <a href="<?= SITE_URL ?>/<?= htmlspecialchars($mat['file_url']) ?>" download="<?= htmlspecialchars($mat['title']) ?>.pdf" target="_blank" style="background: #F1F5F9; color: #1E293B; padding: 8px 12px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; text-decoration: none;">Download</a>
             </div>
             <?php endforeach; ?>
 
