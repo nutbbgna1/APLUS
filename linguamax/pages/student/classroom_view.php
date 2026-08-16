@@ -346,7 +346,7 @@ if (isset($_GET['success'])) {
                         <div style="font-size: 0.75rem; color: #94A3B8; font-weight: 600;">EP <?= $mat['episode_number'] ?> • <?= $mat['size_mb'] ?> MB</div>
                     </div>
                 </div>
-                <a href="<?= SITE_URL ?>/../<?= htmlspecialchars($mat['file_url']) ?>" target="_blank" style="background: #F1F5F9; color: #1E293B; padding: 8px 12px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; text-decoration: none;">Download</a>
+                <a href="<?= SITE_URL ?>/../<?= htmlspecialchars($mat['file_url']) ?>" download target="_blank" style="background: #F1F5F9; color: #1E293B; padding: 8px 12px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; text-decoration: none;">Download</a>
             </div>
             <?php endforeach; ?>
 
