@@ -72,16 +72,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $duration = $_POST['duration'];
         $is_locked = isset($_POST['is_locked']) ? 1 : 0;
         
+        set_time_limit(0); // Prevent PHP timeout for large video uploads
         $ep_video_url = '';
-        if (isset($_FILES['ep_video']) && $_FILES['ep_video']['error'] === UPLOAD_ERR_OK) {
-            $ext = pathinfo($_FILES['ep_video']['name'], PATHINFO_EXTENSION);
-            $vidName = 'ep_' . time() . '_' . rand(100, 999) . '.' . $ext;
-            $vidPath = __DIR__ . '/../../uploads/courses/episodes/' . $vidName;
-            if (!is_dir(__DIR__ . '/../../uploads/courses/episodes/')) {
-                mkdir(__DIR__ . '/../../uploads/courses/episodes/', 0777, true);
-            }
-            if (move_uploaded_file($_FILES['ep_video']['tmp_name'], $vidPath)) {
-                $ep_video_url = 'uploads/courses/episodes/' . $vidName;
+        if (isset($_FILES['ep_video']) && $_FILES['ep_video']['name'] !== '') {
+            if ($_FILES['ep_video']['error'] === UPLOAD_ERR_OK) {
+                $ext = pathinfo($_FILES['ep_video']['name'], PATHINFO_EXTENSION);
+                $vidName = 'ep_' . time() . '_' . rand(100, 999) . '.' . $ext;
+                $vidPath = __DIR__ . '/../../uploads/courses/episodes/' . $vidName;
+                if (!is_dir(__DIR__ . '/../../uploads/courses/episodes/')) {
+                    mkdir(__DIR__ . '/../../uploads/courses/episodes/', 0777, true);
+                }
+                if (move_uploaded_file($_FILES['ep_video']['tmp_name'], $vidPath)) {
+                    $ep_video_url = 'uploads/courses/episodes/' . $vidName;
+                } else {
+                    throw new Exception("อัปโหลดวิดีโอล้มเหลว: ไม่สามารถย้ายไฟล์ได้");
+                }
+            } else {
+                throw new Exception("เกิดข้อผิดพลาดในการอัปโหลดวิดีโอ (Error Code: " . $_FILES['ep_video']['error'] . ") - ไฟล์อาจมีขนาดใหญ่เกินไป หรือเซิร์ฟเวอร์ขัดข้อง");
             }
         } else {
             $ep_youtube = trim($_POST['ep_youtube'] ?? '');
@@ -107,18 +114,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $mat_ep_num = (int)$_POST['mat_episode_number'];
         $mat_title = $_POST['mat_title'];
         
+        set_time_limit(0); // Prevent PHP timeout for large file uploads
         $mat_file_url = '';
         $mat_size_mb = 0;
-        if (isset($_FILES['mat_file']) && $_FILES['mat_file']['error'] === UPLOAD_ERR_OK) {
-            $ext = pathinfo($_FILES['mat_file']['name'], PATHINFO_EXTENSION);
-            $docName = 'mat_' . time() . '_' . rand(100, 999) . '.' . $ext;
-            $docPath = __DIR__ . '/../../uploads/courses/materials/' . $docName;
-            if (!is_dir(__DIR__ . '/../../uploads/courses/materials/')) {
-                mkdir(__DIR__ . '/../../uploads/courses/materials/', 0777, true);
-            }
-            if (move_uploaded_file($_FILES['mat_file']['tmp_name'], $docPath)) {
-                $mat_file_url = 'uploads/courses/materials/' . $docName;
-                $mat_size_mb = round(filesize($docPath) / 1048576, 2);
+        if (isset($_FILES['mat_file']) && $_FILES['mat_file']['name'] !== '') {
+            if ($_FILES['mat_file']['error'] === UPLOAD_ERR_OK) {
+                $ext = pathinfo($_FILES['mat_file']['name'], PATHINFO_EXTENSION);
+                $docName = 'mat_' . time() . '_' . rand(100, 999) . '.' . $ext;
+                $docPath = __DIR__ . '/../../uploads/courses/materials/' . $docName;
+                if (!is_dir(__DIR__ . '/../../uploads/courses/materials/')) {
+                    mkdir(__DIR__ . '/../../uploads/courses/materials/', 0777, true);
+                }
+                if (move_uploaded_file($_FILES['mat_file']['tmp_name'], $docPath)) {
+                    $mat_file_url = 'uploads/courses/materials/' . $docName;
+                    $mat_size_mb = round(filesize($docPath) / 1048576, 2);
+                } else {
+                    throw new Exception("อัปโหลดเอกสารล้มเหลว: ไม่สามารถย้ายไฟล์ได้");
+                }
+            } else {
+                throw new Exception("เกิดข้อผิดพลาดในการอัปโหลดเอกสาร (Error Code: " . $_FILES['mat_file']['error'] . ") - ไฟล์อาจมีขนาดใหญ่เกินไป หรือเซิร์ฟเวอร์ขัดข้อง");
             }
         }
         
