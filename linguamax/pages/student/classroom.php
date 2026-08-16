@@ -1,13 +1,13 @@
 <?php
 // ============================================================
-// LinguaMax — Student Classroom (Course Storefront)
+// LinguaMax — Student Classroom (Storefront & My Courses)
 // ============================================================
 include __DIR__ . '/../../includes/header.php';
 
 $db = getDB();
 $user_id = $_SESSION['user_id'] ?? 1;
 
-// Fetch published courses
+// Fetch all published courses
 $coursesDb = $db->query("
     SELECT c.*, 
            (SELECT COUNT(*) FROM course_episodes WHERE course_id = c.id) as ep_count
@@ -28,74 +28,53 @@ $stmt = $db->prepare("
 $stmt->execute([$user_id]);
 $myApprovedCourses = $stmt->fetchAll();
 
-// Fetch categories
-$catDb = $db->query("SELECT * FROM course_categories ORDER BY id ASC")->fetchAll();
-$categories = array_column($catDb, 'name');
-
-// Fetch subcategories grouped by category
-$subcatDb = $db->query("SELECT s.*, c.name as cat_name FROM course_subcategories s JOIN course_categories c ON s.category_id = c.id")->fetchAll();
-$subcatsByCat = [];
-foreach ($subcatDb as $s) {
-    $subcatsByCat[$s['cat_name']][] = $s['name'];
-}
-
+// Get unique categories and grades for filter
+$categories = array_unique(array_column($coursesDb, 'category'));
 $grades = ['ทั้งหมด', 'ป.4', 'ป.5', 'ป.6', 'ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5', 'ม.6'];
 ?>
 
-<div class="animate-fade-in" style="padding: 16px 4px 40px 4px; min-height: 100vh;">
+<div class="animate-fade-in" style="padding: 24px 16px 80px 16px; min-height: 100vh; max-width: 1200px; margin: 0 auto;">
     
-    <!-- Title -->
-    <h1 style="font-size: 1.8rem; font-weight: 900; color: #1E293B; line-height: 1.25; margin-bottom: 24px; font-family: var(--font-display);">
-        Find a resource you<br>want to learn!
-    </h1>
-
-    <!-- Search Bar -->
-    <div style="position: relative; margin-bottom: 24px;">
-        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-light); font-size: 1.2rem;"></i>
-        <input type="text" id="searchInput" placeholder="Search Courses" onkeyup="filterCourses()" style="width: 100%; padding: 14px 16px 14px 48px; border-radius: 12px; border: 1px solid var(--border); font-size: 1rem; box-shadow: var(--shadow-sm); outline: none; font-family: inherit; color: var(--text); background: var(--surface);">
-    </div>
-    
-    <!-- Filters -->
-    <div style="margin-bottom: 16px; padding: 12px; background: white; border-radius: 12px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); display: flex; gap: 16px;">
-        <div style="flex: 1;">
-            <label style="font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 8px; display: block;">เลือกระดับชั้นเรียน:</label>
-            <select id="gradeFilter" onchange="filterCourses()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); outline: none; font-size: 0.95rem; font-weight: 600; color: var(--primary);">
-                <?php foreach($grades as $g): ?>
-                    <option value="<?= $g ?>"><?= $g ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div style="flex: 1;">
-            <label style="font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 8px; display: block;">หมวดย่อย:</label>
-            <select id="subcatFilter" onchange="filterCourses()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); outline: none; font-size: 0.95rem; font-weight: 600; color: var(--primary);">
-                <option value="ทั้งหมด">ทั้งหมด</option>
-            </select>
-        </div>
+    <!-- Header -->
+    <div style="margin-bottom: 32px;">
+        <h1 style="font-size: 2.2rem; font-weight: 900; color: #1E293B; line-height: 1.2; font-family: var(--font-display); margin-bottom: 8px;">
+            Let's start learning! 🚀
+        </h1>
+        <p style="color: #64748B; font-size: 1.05rem;">Choose a course below and level up your skills.</p>
     </div>
 
-    <!-- My Courses (Approved) -->
-    <?php if (!empty($myApprovedCourses)): ?>
-    <div style="margin-bottom: 36px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h2 style="font-size: 1.15rem; font-weight: 800; color: #1E293B; margin: 0; font-family: var(--font-display);">คอร์สเรียนของฉัน</h2>
+    <!-- My Courses Section -->
+    <?php if (count($myApprovedCourses) > 0): ?>
+    <div style="margin-bottom: 40px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+            <h2 style="font-size: 1.4rem; font-weight: 800; color: #1E293B; font-family: var(--font-display);">คอร์สเรียนของฉัน</h2>
+            <div style="background: #E0E7FF; color: #4F46E5; padding: 4px 12px; border-radius: 20px; font-weight: 800; font-size: 0.85rem;">
+                <?= count($myApprovedCourses) ?> Courses
+            </div>
         </div>
-        <div style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 12px; margin: 0 -4px; padding-left: 4px; padding-right: 4px; -webkit-overflow-scrolling: touch;" class="custom-scrollbar">
-            <?php foreach($myApprovedCourses as $mc): ?>
-            <a href="?page=classroom-view&id=<?= $mc['course_id'] ?>" style="flex: 0 0 240px; background: white; border-radius: 20px; border: 1px solid var(--border); overflow: hidden; text-decoration: none; box-shadow: var(--shadow-sm); transition: 0.3s; display: block;">
-                <div style="width: 100%; height: 140px; background: #F1F5F9; position: relative;">
+        
+        <div style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 16px; scroll-snap-type: x mandatory; scrollbar-width: none;" class="hide-scrollbar">
+            <?php foreach ($myApprovedCourses as $mc): ?>
+            <a href="?page=classroom-view&id=<?= $mc['course_id'] ?>" style="scroll-snap-align: start; flex: 0 0 280px; background: white; border-radius: 24px; border: 1px solid rgba(226, 232, 240, 0.8); overflow: hidden; text-decoration: none; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: block;" class="course-card-hover">
+                <div style="width: 100%; height: 150px; background: linear-gradient(135deg, #F1F5F9, #E2E8F0); position: relative; overflow: hidden;">
                     <?php if ($mc['image_url']): ?>
-                        <img src="<?= SITE_URL ?>/<?= htmlspecialchars($mc['image_url']) ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                        <img src="<?= SITE_URL ?>/<?= htmlspecialchars($mc['image_url']) ?>" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;" class="course-img">
                     <?php else: ?>
-                        <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #E0E7FF, #C7D2FE); color: #6366F1; font-size: 2.5rem; font-weight: 900;"><?= mb_substr($mc['category'], 0, 1) ?></div>
+                        <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #4F46E5, #6366F1); color: white; font-size: 3rem; font-weight: 900;"><?= mb_substr($mc['category'], 0, 1) ?></div>
                     <?php endif; ?>
-                    <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(255,255,255,0.95); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; color: #16A34A; display: flex; align-items: center; gap: 4px;">
-                        <i class="fa-solid fa-circle-check"></i> เข้าเรียนได้
+                    
+                    <!-- Continue Learning Badge -->
+                    <div style="position: absolute; bottom: 12px; right: 12px; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(4px); padding: 6px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 800; color: #4F46E5; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <i class="fa-solid fa-play" style="margin-right: 4px;"></i> เข้าเรียน
                     </div>
                 </div>
-                <div style="padding: 16px;">
-                    <div style="font-size: 0.75rem; font-weight: 800; color: var(--primary); margin-bottom: 4px;"><?= htmlspecialchars($mc['category']) ?></div>
-                    <div style="font-weight: 800; color: #1E293B; font-size: 1.05rem; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><?= htmlspecialchars($mc['title']) ?></div>
-                    <div style="font-size: 0.75rem; color: #94A3B8; font-weight: 600;"><?= $mc['ep_count'] ?> บทเรียน</div>
+                <div style="padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 0.75rem; font-weight: 700; color: #6366F1; background: #E0E7FF; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.5px;"><?= htmlspecialchars($mc['category']) ?></span>
+                        <span style="font-size: 0.75rem; color: #94A3B8; font-weight: 600;"><i class="fa-solid fa-video"></i> <?= $mc['ep_count'] ?> EP</span>
+                    </div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #1E293B; margin-bottom: 6px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><?= htmlspecialchars($mc['title']) ?></div>
+                    <div style="font-size: 0.8rem; color: #64748B; font-weight: 600;"><i class="fa-solid fa-chalkboard-user"></i> By <?= htmlspecialchars($mc['instructor']) ?></div>
                 </div>
             </a>
             <?php endforeach; ?>
@@ -103,160 +82,156 @@ $grades = ['ทั้งหมด', 'ป.4', 'ป.5', 'ป.6', 'ม.1', 'ม.2',
     </div>
     <?php endif; ?>
 
-    <!-- Categories -->
-    <div style="margin-bottom: 36px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h2 style="font-size: 1.15rem; font-weight: 800; color: #1E293B; margin: 0; font-family: var(--font-display);">Categories</h2>
+    <!-- Explore Courses -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+        <h2 style="font-size: 1.4rem; font-weight: 800; color: #1E293B; font-family: var(--font-display);">คอร์สทั้งหมด</h2>
+    </div>
+
+    <!-- Search & Filters -->
+    <div style="background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid var(--border); margin-bottom: 32px;">
+        <div style="position: relative; margin-bottom: 16px;">
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #94A3B8; font-size: 1.1rem;"></i>
+            <input type="text" id="searchInput" placeholder="ค้นหาคอร์สเรียน..." onkeyup="filterCourses()" style="width: 100%; padding: 14px 16px 14px 44px; border-radius: 12px; border: 1px solid #E2E8F0; background: #F8FAFC; font-size: 0.95rem; outline: none; transition: all 0.2s; font-family: inherit;">
         </div>
-        <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; margin: 0 -4px; padding-left: 4px; padding-right: 4px; -webkit-overflow-scrolling: touch;" id="category-tabs">
-            <?php foreach($categories as $index => $cat): ?>
-                <div class="category-tab <?= $index === 0 ? 'active' : '' ?>" data-category="<?= $cat ?>" onclick="selectCategory('<?= $cat ?>')">
-                    <?= $cat ?>
-                </div>
-            <?php endforeach; ?>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div>
+                <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #64748B; margin-bottom: 6px; text-transform: uppercase;">หมวดหมู่</label>
+                <select id="catFilter" onchange="filterCourses()" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #E2E8F0; background: #F8FAFC; font-size: 0.9rem; outline: none; font-family: inherit;">
+                    <option value="">ทั้งหมด</option>
+                    <?php foreach ($categories as $cat): ?>
+                        <option value="<?= htmlspecialchars($cat) ?>"><?= htmlspecialchars($cat) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #64748B; margin-bottom: 6px; text-transform: uppercase;">ระดับชั้น</label>
+                <select id="gradeFilter" onchange="filterCourses()" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #E2E8F0; background: #F8FAFC; font-size: 0.9rem; outline: none; font-family: inherit;">
+                    <?php foreach ($grades as $g): ?>
+                        <option value="<?= htmlspecialchars($g === 'ทั้งหมด' ? '' : $g) ?>"><?= htmlspecialchars($g) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
         </div>
     </div>
 
-    <!-- Course List -->
-    <div style="margin-bottom: 40px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h2 id="course-list-title" style="font-size: 1.15rem; font-weight: 800; color: #1E293B; margin: 0; font-family: var(--font-display);">คอร์ส<?= !empty($categories) ? $categories[0] : '' ?></h2>
-        </div>
-        
-        <div id="course-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
-            <?php foreach($coursesDb as $c): ?>
-                <a href="?page=classroom-view&id=<?= $c['id'] ?>" 
-                   class="course-card" 
-                   data-category="<?= htmlspecialchars($c['category']) ?>" 
-                   data-subcategory="<?= htmlspecialchars($c['sub_category']) ?>" 
-                   data-grade="<?= htmlspecialchars($c['grade_level'] ?: 'ทั้งหมด') ?>"
-                   data-title="<?= htmlspecialchars(strtolower($c['title'])) ?>"
-                   style="text-decoration: none; color: inherit; background: var(--surface); border-radius: 20px; box-shadow: var(--shadow); border: 1px solid var(--border); transition: var(--transition); cursor: pointer; display: none; overflow: hidden;">
-                   
-                    <!-- Course Image -->
-                    <div style="width: 100%; height: 150px; background: linear-gradient(135deg, #E0E7FF, #C7D2FE); position: relative;">
-                        <?php if ($c['image_url']): ?>
-                            <img src="<?= SITE_URL ?>/<?= htmlspecialchars($c['image_url']) ?>" style="width: 100%; height: 100%; object-fit: cover;">
-                        <?php else: ?>
-                            <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color: #6366F1; font-size: 3rem; font-weight: 900; font-family: var(--font-display);"><?= mb_substr($c['category'], 0, 1) ?></div>
-                        <?php endif; ?>
-                        <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.65); color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700;">
-                            <?= htmlspecialchars($c['grade_level'] ?: 'ทั้งหมด') ?>
-                        </div>
-                        <div style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.65); color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700;">
-                            <?= $c['ep_count'] ?> EP
-                        </div>
+    <!-- Course Grid -->
+    <div id="courseList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px;">
+        <?php foreach ($coursesDb as $c): ?>
+            <div class="course-item" data-title="<?= strtolower(htmlspecialchars($c['title'])) ?>" data-cat="<?= htmlspecialchars($c['category']) ?>" data-grade="<?= htmlspecialchars($c['grade_level']) ?>" style="background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid rgba(226, 232, 240, 0.8); cursor: pointer; transition: all 0.3s ease; display: flex; flex-direction: column; height: 100%;" onclick="window.location.href='?page=classroom-view&id=<?= $c['id'] ?>'" class="store-card-hover">
+                
+                <!-- Course Image -->
+                <div style="width: 100%; height: 160px; background: #F1F5F9; position: relative; overflow: hidden;">
+                    <?php if ($c['image_url']): ?>
+                        <img src="<?= SITE_URL ?>/<?= htmlspecialchars($c['image_url']) ?>" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;" class="course-img">
+                    <?php else: ?>
+                        <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color: white; background: linear-gradient(135deg, #0EA5E9, #38BDF8); font-size: 3rem; font-weight: 900; font-family: var(--font-display);"><?= mb_substr($c['category'], 0, 1) ?></div>
+                    <?php endif; ?>
+                    
+                    <!-- Grade Badge -->
+                    <div style="position: absolute; top: 12px; right: 12px; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); color: white; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700;">
+                        <?= htmlspecialchars($c['grade_level']) ?>
+                    </div>
+                </div>
+
+                <!-- Course Content -->
+                <div style="padding: 20px; display: flex; flex-direction: column; flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span style="font-size: 0.75rem; font-weight: 700; color: #0EA5E9; background: #E0F2FE; padding: 4px 10px; border-radius: 8px; text-transform: uppercase;"><?= htmlspecialchars($c['category']) ?></span>
+                        <span style="font-size: 0.75rem; color: #94A3B8; font-weight: 600;"><i class="fa-solid fa-list"></i> <?= $c['ep_count'] ?> EP</span>
                     </div>
                     
-                    <div style="padding: 16px;">
-                        <div style="font-weight: 800; font-size: 1.05rem; color: var(--text); font-family: var(--font-display); margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><?= htmlspecialchars($c['title']) ?></div>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 12px;">By <?= htmlspecialchars($c['instructor']) ?></div>
-                        <div style="display: flex; justify-content: flex-end; align-items: center;">
-                            <div style="font-weight: 800; font-size: 1.15rem; color: var(--primary); font-family: var(--font-display);">฿<?= number_format($c['price']) ?></div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: #1E293B; margin-bottom: 8px; line-height: 1.4; flex: 1;"><?= htmlspecialchars($c['title']) ?></div>
+                    <div style="font-size: 0.85rem; color: #64748B; font-weight: 600; margin-bottom: 16px;"><i class="fa-solid fa-user-tie"></i> <?= htmlspecialchars($c['instructor']) ?></div>
+                    
+                    <div style="border-top: 1px solid #F1F5F9; padding-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="font-size: 1.3rem; font-weight: 900; color: #4F46E5;">
+                            <?= $c['price'] > 0 ? '฿' . number_format($c['price'], 2) : 'ฟรี' ?>
+                        </div>
+                        <div style="width: 36px; height: 36px; border-radius: 50%; background: #F8FAFC; display: flex; justify-content: center; align-items: center; color: #94A3B8; border: 1px solid #E2E8F0; transition: all 0.2s;" class="arrow-btn">
+                            <i class="fa-solid fa-arrow-right"></i>
                         </div>
                     </div>
-                </a>
-            <?php endforeach; ?>
-            
-            <div id="no-results" style="display: none; grid-column: 1 / -1; text-align: center; padding: 40px 20px; color: var(--text-muted); font-weight: 600;">
-                ไม่พบคอร์สเรียนที่ตรงกับเงื่อนไข
+                </div>
             </div>
-        </div>
+        <?php endforeach; ?>
+        
+        <?php if (empty($coursesDb)): ?>
+            <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: white; border-radius: 20px; border: 1px dashed #CBD5E1;">
+                <i class="fa-solid fa-box-open" style="font-size: 3rem; color: #CBD5E1; margin-bottom: 16px;"></i>
+                <h3 style="font-size: 1.2rem; color: #475569; margin-bottom: 8px;">ยังไม่มีคอร์สเรียนในระบบ</h3>
+                <p style="color: #94A3B8;">แอดมินกำลังเพิ่มคอร์สเรียนใหม่ เร็วๆ นี้!</p>
+            </div>
+        <?php endif; ?>
     </div>
 
 </div>
 
 <style>
-/* Hide default scrollbars */
-div[style*="overflow-x: auto"]::-webkit-scrollbar { display: none; }
-div[style*="overflow-x: auto"] { -ms-overflow-style: none; scrollbar-width: none; }
+/* Hide Scrollbar but keep functionality */
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
 
-.category-tab {
-    background: var(--surface); border: 1px solid var(--border); color: var(--text-secondary); 
-    padding: 10px 20px; border-radius: 12px; font-weight: 700; font-size: 0.9rem; 
-    flex-shrink: 0; box-shadow: var(--shadow-sm); cursor: pointer;
-    transition: all 0.3s ease;
-}
-.category-tab:hover {
-    border-color: var(--primary);
-    color: var(--primary);
-}
-.category-tab.active {
-    background: var(--primary); color: white; border-color: var(--primary);
-    box-shadow: 0 4px 12px var(--primary-glow);
-}
-.course-card { position: relative; }
-.course-card:hover {
+/* Hover effects */
+.course-card-hover:hover {
     transform: translateY(-4px);
-    box-shadow: var(--shadow-lg) !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+.course-card-hover:hover .course-img {
+    transform: scale(1.05);
+}
+
+.store-card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+    border-color: #CBD5E1 !important;
+}
+.store-card-hover:hover .course-img {
+    transform: scale(1.05);
+}
+.store-card-hover:hover .arrow-btn {
+    background: #4F46E5 !important;
+    color: white !important;
+    border-color: #4F46E5 !important;
+}
+
+#searchInput:focus {
+    border-color: #4F46E5 !important;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1) !important;
+}
+select:focus {
+    border-color: #4F46E5 !important;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1) !important;
 }
 </style>
 
 <script>
-const subcatsByCat = <?= json_encode($subcatsByCat) ?>;
-let currentCategory = '<?= !empty($categories) ? addslashes($categories[0]) : '' ?>';
-
-function updateSubcatDropdown() {
-    const subSelect = document.getElementById('subcatFilter');
-    subSelect.innerHTML = '<option value="ทั้งหมด">ทั้งหมด</option>';
-    if (subcatsByCat[currentCategory]) {
-        subcatsByCat[currentCategory].forEach(sub => {
-            const opt = document.createElement('option');
-            opt.value = sub;
-            opt.textContent = sub;
-            subSelect.appendChild(opt);
-        });
-    }
-}
-
-function selectCategory(categoryName) {
-    currentCategory = categoryName;
-    
-    const tabs = document.querySelectorAll('.category-tab');
-    tabs.forEach(tab => {
-        tab.classList.toggle('active', tab.getAttribute('data-category') === categoryName);
-    });
-
-    document.getElementById('course-list-title').innerText = 'คอร์ส' + categoryName;
-    
-    updateSubcatDropdown();
-    filterCourses();
-}
-
 function filterCourses() {
-    const selectedGrade = document.getElementById('gradeFilter').value;
-    const selectedSubcat = document.getElementById('subcatFilter').value;
-    const searchQuery = document.getElementById('searchInput').value.toLowerCase();
-    const courses = document.querySelectorAll('.course-card');
-    let visibleCount = 0;
-
-    courses.forEach(course => {
-        const cat = course.getAttribute('data-category');
-        const subcat = course.getAttribute('data-subcategory');
-        const grade = course.getAttribute('data-grade');
-        const title = course.getAttribute('data-title');
+    let q = document.getElementById('searchInput').value.toLowerCase();
+    let c = document.getElementById('catFilter').value;
+    let g = document.getElementById('gradeFilter').value;
+    
+    document.querySelectorAll('.course-item').forEach(item => {
+        let title = item.getAttribute('data-title');
+        let cat = item.getAttribute('data-cat');
+        let grade = item.getAttribute('data-grade');
         
-        const matchCat = (cat === currentCategory);
-        const matchSubcat = (selectedSubcat === 'ทั้งหมด' || subcat === selectedSubcat);
-        const matchGrade = (selectedGrade === 'ทั้งหมด' || grade === 'ทั้งหมด' || grade === selectedGrade);
-        const matchSearch = title.includes(searchQuery);
+        let matchQ = title.includes(q);
+        let matchC = c === '' || cat === c;
+        let matchG = g === '' || grade === g;
         
-        if (matchCat && matchSubcat && matchGrade && matchSearch) {
-            course.style.display = 'block';
-            course.classList.add('animate-fade-in');
-            visibleCount++;
+        if (matchQ && matchC && matchG) {
+            item.style.display = 'flex';
         } else {
-            course.style.display = 'none';
+            item.style.display = 'none';
         }
     });
-    
-    document.getElementById('no-results').style.display = visibleCount === 0 ? 'block' : 'none';
 }
-
-window.onload = function() {
-    updateSubcatDropdown();
-    filterCourses();
-};
 </script>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
