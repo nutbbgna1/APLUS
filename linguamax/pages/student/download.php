@@ -44,7 +44,33 @@ $file_to_serve = realpath($file_to_serve);
 
 // Ensure the file is inside the linguamax directory
 $base_dir = realpath(__DIR__ . '/../../');
-if (!$file_to_serve || strpos($file_to_serve, $base_dir) !== 0 || !file_exists($file_to_serve)) {
+$is_file_missing = (!$file_to_serve || strpos($file_to_serve, $base_dir) !== 0 || !file_exists($file_to_serve));
+
+if ($is_file_missing) {
+    // Attempt automatic recovery from the old folder structure
+    // Use dirname() to completely avoid '../' which triggers Hostinger's ModSecurity WAF
+    $document_root = $_SERVER['DOCUMENT_ROOT']; // e.g. .../English_web/linguamax
+    
+    // Check if the document root is actually linguamax
+    if (basename($document_root) === 'linguamax') {
+        $parent_dir = dirname($document_root); // e.g. .../English_web
+        $old_file_path = $parent_dir . '/' . $rel_path;
+        
+        if (file_exists($old_file_path) && is_file($old_file_path)) {
+            // Found it! Let's copy it to the new location so it works permanently
+            $new_dir = dirname(__DIR__ . '/../../' . $rel_path);
+            if (!is_dir($new_dir)) {
+                mkdir($new_dir, 0777, true);
+            }
+            if (copy($old_file_path, __DIR__ . '/../../' . $rel_path)) {
+                // Successfully recovered! Set the file_to_serve to the new copied file
+                $file_to_serve = realpath(__DIR__ . '/../../' . $rel_path);
+            }
+        }
+    }
+}
+
+if (!$file_to_serve || !file_exists($file_to_serve)) {
     die("Error: File not found. Please contact the administrator to re-upload this document.");
 }
 
