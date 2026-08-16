@@ -154,31 +154,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_action'] ?? '') === '
     exit;
 }
 
-// ── Handle: Add Student Manually ──
+// ── Handle: Add Student Manually (Bulk) ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_action'] ?? '') === 'add_student') {
     try {
         if (!$id) throw new Exception("กรุณาบันทึกข้อมูลคอร์สก่อน");
-        $student_username = trim($_POST['student_username'] ?? '');
-        if (empty($student_username)) throw new Exception("กรุณากรอกชื่อผู้ใช้ของนักเรียน");
-
-        // Find user
-        $stmt = $db->prepare("SELECT id, fname, lname FROM users WHERE username = ?");
-        $stmt->execute([$student_username]);
-        $student = $stmt->fetch();
-        if (!$student) throw new Exception("ไม่พบนักเรียนที่มีชื่อผู้ใช้ \"$student_username\"");
-
-        // Check if already enrolled
-        $stmt = $db->prepare("SELECT id FROM course_enrollments WHERE user_id = ? AND course_id = ?");
-        $stmt->execute([$student['id'], $id]);
-        if ($stmt->fetch()) {
-            // Update to approved
-            $db->prepare("UPDATE course_enrollments SET status = 'approved', approved_at = NOW() WHERE user_id = ? AND course_id = ?")->execute([$student['id'], $id]);
-        } else {
-            $db->prepare("INSERT INTO course_enrollments (user_id, course_id, status, approved_at) VALUES (?, ?, 'approved', NOW())")->execute([$student['id'], $id]);
+        $student_ids = $_POST['student_ids'] ?? [];
+        if (empty($student_ids) || !is_array($student_ids)) {
+            throw new Exception("กรุณาเลือกนักเรียนอย่างน้อย 1 คน");
         }
+
+        $db->beginTransaction();
+        foreach ($student_ids as $sid) {
+            $sid = (int)$sid;
+            if (!$sid) continue;
+
+            // Check if already enrolled
+            $stmt = $db->prepare("SELECT id FROM course_enrollments WHERE user_id = ? AND course_id = ?");
+            $stmt->execute([$sid, $id]);
+            if ($stmt->fetch()) {
+                $db->prepare("UPDATE course_enrollments SET status = 'approved', approved_at = NOW() WHERE user_id = ? AND course_id = ?")->execute([$sid, $id]);
+            } else {
+                $db->prepare("INSERT INTO course_enrollments (user_id, course_id, status, approved_at) VALUES (?, ?, 'approved', NOW())")->execute([$sid, $id]);
+            }
+        }
+        $db->commit();
         echo "<script>window.location.href='?page=course_edit&id=$id&success=1';</script>";
         exit;
     } catch (Exception $e) {
+        if ($db->inTransaction()) $db->rollBack();
         $errorMsg = $e->getMessage();
     }
 }
@@ -562,29 +565,10 @@ $grades = ['ทั้งหมด', 'ป.4', 'ป.5', 'ป.6', 'ม.1', 'ม.2',
             <i class="fa-solid fa-user-plus" style="color: #16A34A; font-size: 1.1rem;"></i>
             <h2 style="font-size: 1.1rem; font-weight: 700; color: #1E293B; margin: 0;">นักเรียนในคอร์ส (<?= count($enrollments) ?> คน)</h2>
         </div>
-    </div>
-
-    <!-- Add Student Form -->
-    <?php
-    $allStudents = $db->query("SELECT username, fname, lname FROM users WHERE role = 'student' ORDER BY fname ASC, username ASC")->fetchAll();
-    $enrolledUsernames = array_column($enrollments, 'username');
-    ?>
-    <form method="POST" style="display: flex; gap: 10px; margin-bottom: 16px; padding: 14px; background: #F0FDF4; border-radius: 10px; border: 1px solid #BBF7D0;">
-        <input type="hidden" name="form_action" value="add_student">
-        <select name="student_username" required style="flex: 1; padding: 10px 14px; border: 1px solid #BBF7D0; border-radius: 8px; font-size: 0.9rem; outline: none; background: white;">
-            <option value="">-- เลือกนักเรียนที่ต้องการเพิ่ม --</option>
-            <?php foreach($allStudents as $stu): ?>
-                <?php if (!in_array($stu['username'], $enrolledUsernames)): ?>
-                    <option value="<?= htmlspecialchars($stu['username']) ?>">
-                        <?= htmlspecialchars(($stu['fname'] ?? '') . ' ' . ($stu['lname'] ?? '')) ?> (@<?= htmlspecialchars($stu['username']) ?>)
-                    </option>
-                <?php endif; ?>
-            <?php endforeach; ?>
-        </select>
-        <button type="submit" style="background: #16A34A; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
+        <button type="button" onclick="document.getElementById('modal_student').style.display='flex';" style="background: #16A34A; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(22,163,74,0.2);">
             <i class="fa-solid fa-user-plus"></i> เพิ่มนักเรียน
         </button>
-    </form>
+    </div>
 
     <?php if (empty($enrollments)): ?>
     <div style="text-align: center; color: #94A3B8; padding: 30px 0; font-size: 0.9rem;">
@@ -624,6 +608,96 @@ $grades = ['ทั้งหมด', 'ป.4', 'ป.5', 'ป.6', 'ม.1', 'ม.2',
     <?php endif; ?>
 </div>
 <?php endif; ?>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- MODAL: Add Student (Bulk with Search)              -->
+<!-- ═══════════════════════════════════════════════════ -->
+<?php
+$allStudents = $db->query("SELECT id, username, fname, lname FROM users WHERE role = 'student' ORDER BY fname ASC, id ASC")->fetchAll();
+$enrolledIds = array_column($enrollments, 'user_id');
+$availableStudents = array_filter($allStudents, function($s) use ($enrolledIds) { return !in_array($s['id'], $enrolledIds); });
+?>
+<div id="modal_student" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(2px);" onclick="if(event.target===this)this.style.display='none';">
+    <div style="background: white; border-radius: 16px; width: 100%; max-width: 500px; max-height: 90vh; display: flex; flex-direction: column; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); animation: slideUp 0.3s ease;">
+        <h3 style="font-size: 1.15rem; font-weight: 800; color: #1E293B; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-user-plus" style="color: #16A34A;"></i> เพิ่มนักเรียนเข้าคอร์ส
+        </h3>
+        
+        <div style="position: relative; margin-bottom: 16px;">
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94A3B8;"></i>
+            <input type="text" id="studentSearch" placeholder="ค้นหาชื่อ หรือนามสกุล..." onkeyup="filterStudents()" style="width: 100%; padding: 10px 14px 10px 40px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; outline: none;">
+        </div>
+
+        <form method="POST" action="?page=course_edit&id=<?= $id ?>" style="display: flex; flex-direction: column; overflow: hidden; flex: 1;">
+            <input type="hidden" name="form_action" value="add_student">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 0 4px;">
+                <span style="font-size: 0.85rem; font-weight: 700; color: #64748B;">เลือกนักเรียน</span>
+                <label style="font-size: 0.85rem; font-weight: 700; color: #3B82F6; cursor: pointer;">
+                    <input type="checkbox" id="selectAllStudents" onchange="toggleAllStudents(this)"> เลือกทั้งหมด
+                </label>
+            </div>
+
+            <div id="studentListContainer" style="overflow-y: auto; flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 8px; background: #F8FAFC; display: flex; flex-direction: column; gap: 6px; min-height: 200px; margin-bottom: 16px;">
+                <?php if (empty($availableStudents)): ?>
+                    <div style="text-align: center; color: #94A3B8; padding: 40px 0; font-size: 0.9rem;">ไม่มีนักเรียนที่สามารถเพิ่มได้ (ทุกคนอยู่ในคอร์สแล้ว)</div>
+                <?php endif; ?>
+                <?php foreach($availableStudents as $stu): ?>
+                    <label class="student-item" data-name="<?= strtolower(htmlspecialchars(($stu['fname'] ?? '') . ' ' . ($stu['lname'] ?? ''))) ?>" style="display: flex; align-items: center; gap: 12px; padding: 10px; background: white; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: 0.15s;">
+                        <input type="checkbox" name="student_ids[]" value="<?= $stu['id'] ?>" class="student-checkbox" style="width: 16px; height: 16px; accent-color: #16A34A;">
+                        <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #E0E7FF, #C7D2FE); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #6366F1; font-weight: 800; font-size: 0.75rem;">
+                            <?= mb_substr($stu['fname'] ?: 'U', 0, 1) ?>
+                        </div>
+                        <div>
+                            <div style="font-weight: 700; color: #1E293B; font-size: 0.85rem;"><?= htmlspecialchars(($stu['fname'] ?? '') . ' ' . ($stu['lname'] ?? '')) ?></div>
+                            <?php if($stu['username']): ?>
+                                <div style="font-size: 0.75rem; color: #94A3B8;">@<?= htmlspecialchars($stu['username']) ?></div>
+                            <?php endif; ?>
+                        </div>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 10px; border-top: 1px solid #F1F5F9;">
+                <button type="button" onclick="document.getElementById('modal_student').style.display='none';" style="background: #F1F5F9; color: #64748B; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem;">ยกเลิก</button>
+                <button type="submit" style="background: linear-gradient(135deg, #16A34A, #15803D); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; box-shadow: 0 2px 8px rgba(22,163,74,0.2);">
+                    <i class="fa-solid fa-check"></i> ยืนยันการเพิ่ม
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function filterStudents() {
+    const query = document.getElementById('studentSearch').value.toLowerCase();
+    const items = document.querySelectorAll('.student-item');
+    items.forEach(item => {
+        const name = item.getAttribute('data-name');
+        if (name.includes(query)) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+function toggleAllStudents(checkbox) {
+    const checkboxes = document.querySelectorAll('.student-item:not([style*="display: none"]) .student-checkbox');
+    checkboxes.forEach(cb => cb.checked = checkbox.checked);
+}
+// Add visual effect when checked
+document.querySelectorAll('.student-checkbox').forEach(cb => {
+    cb.addEventListener('change', function() {
+        if(this.checked) {
+            this.closest('.student-item').style.borderColor = '#16A34A';
+            this.closest('.student-item').style.background = '#F0FDF4';
+        } else {
+            this.closest('.student-item').style.borderColor = 'var(--border)';
+            this.closest('.student-item').style.background = 'white';
+        }
+    });
+});
+</script>
 
 <!-- Subcategory JS -->
 <script>
