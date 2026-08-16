@@ -45,7 +45,6 @@ $streak = isLoggedIn() ? getStreak($_SESSION['user_id']) : ['current_streak' => 
             <a href="?page=games" class="<?= $currentPage === 'games' ? 'active' : '' ?>"><img src="<?= SITE_URL ?>/assets/SVG/Rocket.svg" style="width:22px; height:22px; margin-right:4px;"> Games</a>
             <a href="?page=reading" class="<?= $currentPage === 'reading' ? 'active' : '' ?>"><img src="<?= SITE_URL ?>/assets/SVG/Blackboard Reading.svg" style="width:22px; height:22px; margin-right:4px;"> Reading</a>
             <a href="?page=exams" class="<?= $currentPage === 'exams' ? 'active' : '' ?>"><img src="<?= SITE_URL ?>/assets/SVG/Test A+.svg" style="width:22px; height:22px; margin-right:4px;"> Exams</a>
-            <a href="?page=classroom" class="<?= $currentPage === 'classroom' ? 'active' : '' ?>"><img src="<?= SITE_URL ?>/assets/SVG/University.svg" style="width:22px; height:22px; margin-right:4px;"> Classroom</a>
         </nav>
 
         <!-- Header Stats -->

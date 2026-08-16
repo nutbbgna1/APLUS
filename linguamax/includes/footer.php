@@ -15,10 +15,7 @@
             <img src="<?= SITE_URL ?>/assets/SVG/Test A+.svg" style="width:24px; height:24px; margin-bottom:4px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">
             <span>Exams</span>
         </a>
-        <a href="?page=classroom" class="nav-item <?= $currentPage === 'classroom' ? 'active' : '' ?>">
-            <img src="<?= SITE_URL ?>/assets/SVG/University.svg" style="width:24px; height:24px; margin-bottom:4px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">
-            <span>Classroom</span>
-        </a>
+
         <a href="?page=profile" class="nav-item <?= $currentPage === 'profile' ? 'active' : '' ?>">
             <img src="<?= SITE_URL ?>/assets/SVG/Boy Student.svg" style="width:24px; height:24px; margin-bottom:4px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));">
             <span>Profile</span>
