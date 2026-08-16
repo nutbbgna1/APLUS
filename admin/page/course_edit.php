@@ -565,9 +565,22 @@ $grades = ['ทั้งหมด', 'ป.4', 'ป.5', 'ป.6', 'ม.1', 'ม.2',
     </div>
 
     <!-- Add Student Form -->
+    <?php
+    $allStudents = $db->query("SELECT username, fname, lname FROM users WHERE role = 'student' ORDER BY fname ASC, username ASC")->fetchAll();
+    $enrolledUsernames = array_column($enrollments, 'username');
+    ?>
     <form method="POST" style="display: flex; gap: 10px; margin-bottom: 16px; padding: 14px; background: #F0FDF4; border-radius: 10px; border: 1px solid #BBF7D0;">
         <input type="hidden" name="form_action" value="add_student">
-        <input type="text" name="student_username" placeholder="กรอก Username ของนักเรียน" required style="flex: 1; padding: 10px 14px; border: 1px solid #BBF7D0; border-radius: 8px; font-size: 0.9rem; outline: none;">
+        <select name="student_username" required style="flex: 1; padding: 10px 14px; border: 1px solid #BBF7D0; border-radius: 8px; font-size: 0.9rem; outline: none; background: white;">
+            <option value="">-- เลือกนักเรียนที่ต้องการเพิ่ม --</option>
+            <?php foreach($allStudents as $stu): ?>
+                <?php if (!in_array($stu['username'], $enrolledUsernames)): ?>
+                    <option value="<?= htmlspecialchars($stu['username']) ?>">
+                        <?= htmlspecialchars(($stu['fname'] ?? '') . ' ' . ($stu['lname'] ?? '')) ?> (@<?= htmlspecialchars($stu['username']) ?>)
+                    </option>
+                <?php endif; ?>
+            <?php endforeach; ?>
+        </select>
         <button type="submit" style="background: #16A34A; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
             <i class="fa-solid fa-user-plus"></i> เพิ่มนักเรียน
         </button>
