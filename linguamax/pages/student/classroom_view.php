@@ -312,7 +312,7 @@ if (isset($_GET['success'])) {
         <!-- Content: Playlist Tab -->
         <div id="content-playlist" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px;">
             <?php foreach ($episodes as $ep): ?>
-                <div class="ep-item" data-video="<?= htmlspecialchars($ep['video_url']) ?>" onclick="<?= !$ep['is_locked'] && $ep['video_url'] ? "playVideo('" . htmlspecialchars($ep['video_url']) . "', this)" : '' ?>" style="background: white; border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-sm); <?= $ep['is_locked'] ? 'opacity: 0.6;' : 'cursor: pointer;' ?> transition: all 0.2s;">
+                <div class="ep-item" data-video="<?= htmlspecialchars($ep['video_url']) ?>" onclick="<?= $ep['video_url'] ? "playVideo('" . htmlspecialchars($ep['video_url']) . "', this)" : '' ?>" style="background: white; border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-sm); cursor: pointer; transition: all 0.2s;">
                     <div style="display: flex; align-items: center; gap: 16px;">
                         <div style="width: 44px; height: 44px; background: #F8FAFC; border-radius: 12px; display: flex; justify-content: center; align-items: center; font-weight: 800; color: #1E293B; font-family: var(--font-display);"><?= $ep['episode_number'] ?></div>
                         <div>
@@ -320,15 +320,9 @@ if (isset($_GET['success'])) {
                             <div style="font-size: 0.75rem; color: #94A3B8; font-weight: 600;"><?= htmlspecialchars($ep['duration']) ?></div>
                         </div>
                     </div>
-                    <?php if (!$ep['is_locked']): ?>
-                        <div style="width: 36px; height: 36px; background: var(--primary); border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px var(--primary-glow);">
-                            <i class="fa-solid fa-play" style="color: white; font-size: 0.8rem; margin-left: 2px;"></i>
-                        </div>
-                    <?php else: ?>
-                        <div style="width: 36px; height: 36px; background: #F1F5F9; border-radius: 50%; display: flex; justify-content: center; align-items: center;">
-                            <i class="fa-solid fa-lock" style="color: #94A3B8; font-size: 0.9rem;"></i>
-                        </div>
-                    <?php endif; ?>
+                    <div style="width: 36px; height: 36px; background: var(--primary); border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px var(--primary-glow);">
+                        <i class="fa-solid fa-play" style="color: white; font-size: 0.8rem; margin-left: 2px;"></i>
+                    </div>
                 </div>
             <?php endforeach; ?>
             
