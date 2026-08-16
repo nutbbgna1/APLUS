@@ -38,6 +38,10 @@ switch ($page) {
         requireLogin();
         include __DIR__ . '/pages/student/classroom_view.php';
         break;
+    case 'download':
+        requireLogin();
+        include __DIR__ . '/pages/student/download.php';
+        break;
     case 'lessons':
         requireLogin();
         include __DIR__ . '/pages/learning/lessons.php';

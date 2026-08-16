@@ -401,7 +401,7 @@ if (isset($_GET['success'])) {
                         <div style="font-size: 0.8rem; color: #64748B; font-weight: 600;"><i class="fa-solid fa-hashtag"></i> EP <?= $mat['episode_number'] ?> • <?= $mat['size_mb'] ?> MB</div>
                     </div>
                 </div>
-                <a href="<?= SITE_URL ?>/<?= htmlspecialchars($mat['file_url']) ?>" download="<?= htmlspecialchars($mat['title']) ?>.pdf" target="_blank" style="background: #EEF2FF; color: #4F46E5; padding: 10px 20px; border-radius: 12px; font-weight: 800; font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s;" class="hover-bg-indigo">
+                <a href="?page=download&id=<?= $mat['id'] ?>" target="_blank" style="background: #EEF2FF; color: #4F46E5; padding: 10px 20px; border-radius: 12px; font-weight: 800; font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: all 0.2s;" class="hover-bg-indigo">
                     <i class="fa-solid fa-download"></i> Download
                 </a>
             </div>
