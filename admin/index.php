@@ -1,4 +1,7 @@
 <?php
+// Set session timeout to 24 hours (86400 seconds)
+ini_set('session.gc_maxlifetime', 86400);
+session_set_cookie_params(0);
 session_start();
 require_once __DIR__ . '/config/config.php';
 
