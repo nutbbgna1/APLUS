@@ -35,28 +35,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_action'] ?? '') === '
         if (empty($title)) throw new Exception("กรุณากรอกชื่อคอร์ส");
         if (empty($category)) throw new Exception("กรุณาเลือกหมวดหมู่");
 
-        // Handle Image Upload
+        // Handle Image Upload (Compress and Resize)
         $image_url = $course['image_url'] ?? null;
         if (isset($_FILES['cover_image']) && $_FILES['cover_image']['name'] !== '') {
             if ($_FILES['cover_image']['error'] !== UPLOAD_ERR_OK) {
                 throw new Exception("อัปโหลดรูปปกล้มเหลว (Error: " . $_FILES['cover_image']['error'] . ")");
             }
-            $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+            
             $ext = strtolower(pathinfo($_FILES['cover_image']['name'], PATHINFO_EXTENSION));
+            $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
             if (!in_array($ext, $allowed)) {
                 throw new Exception("รองรับเฉพาะไฟล์ JPG, PNG, WEBP, GIF เท่านั้น");
             }
             if ($_FILES['cover_image']['size'] > 2 * 1024 * 1024) {
-                throw new Exception("ไฟล์รูปปกต้องมีขนาดไม่เกิน 2MB");
+                throw new Exception("ไฟล์ต้นฉบับต้องมีขนาดไม่เกิน 2MB");
             }
-            $imgName = 'course_' . time() . '_' . rand(100,999) . '.' . $ext;
+
+            $imgName = 'course_' . time() . '_' . rand(100,999) . '.webp'; // Convert all to webp for best compression
             $uploadDir = __DIR__ . '/../../uploads/courses/';
             if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-            if (!move_uploaded_file($_FILES['cover_image']['tmp_name'], $uploadDir . $imgName)) {
-                throw new Exception("ไม่สามารถบันทึกรูปภาพได้");
+            
+            $tmpPath = $_FILES['cover_image']['tmp_name'];
+            $targetPath = $uploadDir . $imgName;
+            
+            $imageInfo = @getimagesize($tmpPath);
+            if (!$imageInfo) throw new Exception("ไฟล์รูปภาพไม่ถูกต้อง");
+            
+            list($origWidth, $origHeight, $imageType) = $imageInfo;
+            
+            $sourceImage = null;
+            switch ($imageType) {
+                case IMAGETYPE_JPEG: $sourceImage = @imagecreatefromjpeg($tmpPath); break;
+                case IMAGETYPE_PNG:  $sourceImage = @imagecreatefrompng($tmpPath); break;
+                case IMAGETYPE_WEBP: $sourceImage = @imagecreatefromwebp($tmpPath); break;
+                case IMAGETYPE_GIF:  $sourceImage = @imagecreatefromgif($tmpPath); break;
             }
+            
+            if ($sourceImage) {
+                // Resize if width or height > 1000px
+                $maxWidth = 1000;
+                $maxHeight = 1000;
+                if ($origWidth > $maxWidth || $origHeight > $maxHeight) {
+                    $ratio = min($maxWidth / $origWidth, $maxHeight / $origHeight);
+                    $newWidth = round($origWidth * $ratio);
+                    $newHeight = round($origHeight * $ratio);
+                } else {
+                    $newWidth = $origWidth;
+                    $newHeight = $origHeight;
+                }
+                
+                $newImage = imagecreatetruecolor($newWidth, $newHeight);
+                
+                // Preserve transparency for PNG and WEBP
+                if ($imageType == IMAGETYPE_PNG || $imageType == IMAGETYPE_WEBP) {
+                    imagealphablending($newImage, false);
+                    imagesavealpha($newImage, true);
+                    $transparent = imagecolorallocatealpha($newImage, 255, 255, 255, 127);
+                    imagefilledrectangle($newImage, 0, 0, $newWidth, $newHeight, $transparent);
+                }
+                
+                imagecopyresampled($newImage, $sourceImage, 0, 0, 0, 0, $newWidth, $newHeight, $origWidth, $origHeight);
+                
+                // Save as WEBP with 75% quality (usually < 100KB for 1000px)
+                imagewebp($newImage, $targetPath, 75);
+                
+                imagedestroy($sourceImage);
+                imagedestroy($newImage);
+                
+                // If it somehow exceeds 300KB, compress further
+                if (filesize($targetPath) > 300 * 1024) {
+                    $tempImg = @imagecreatefromwebp($targetPath);
+                    if ($tempImg) {
+                        imagewebp($tempImg, $targetPath, 50); // Aggressive compression
+                        imagedestroy($tempImg);
+                    }
+                }
+            } else {
+                // Fallback if GD is not available or fails
+                if (!move_uploaded_file($tmpPath, $targetPath)) {
+                    throw new Exception("ไม่สามารถบันทึกรูปภาพได้");
+                }
+            }
+            
             $image_url = 'uploads/courses/' . $imgName;
         }
+
 
         if ($course) {
             $stmt = $db->prepare("UPDATE courses SET course_code=?, title=?, price=?, category=?, sub_category=?, grade_level=?, course_month=?, instructor=?, description=?, is_published=?, image_url=? WHERE id=?");
