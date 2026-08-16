@@ -162,10 +162,7 @@ foreach ($coursesDb as $c) {
                         </div>
                     </div>
                     <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 16px;">By <?= htmlspecialchars($course['instructor']) ?></div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">
-                            <i class="fa-solid fa-users"></i> <?= $course['students'] ?> Students
-                        </div>
+                    <div style="display: flex; justify-content: flex-end; align-items: center;">
                         <div style="font-weight: 800; font-size: 1.15rem; color: var(--primary); font-family: var(--font-display);">฿<?= number_format($course['price']) ?></div>
                     </div>
                 </a>

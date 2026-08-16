@@ -9,6 +9,7 @@
     <a href="?page=courses" class="nav-link <?= $page == 'courses' ? 'active' : '' ?>"><i class="fa-solid fa-book"></i> Courses</a>
     <a href="?page=categories" class="nav-link <?= $page == 'categories' ? 'active' : '' ?>"><i class="fa-solid fa-list"></i> Categories</a>
     <a href="?page=students" class="nav-link <?= $page == 'students' ? 'active' : '' ?>"><i class="fa-solid fa-users"></i> Students</a>
+    <a href="?page=calendar" class="nav-link <?= $page == 'calendar' ? 'active' : '' ?>"><i class="fa-regular fa-calendar-days"></i> Calendar / Schedule</a>
     <a href="?page=surveys" class="nav-link <?= $page == 'surveys' ? 'active' : '' ?>"><i class="fa-solid fa-clipboard-list"></i> Student Surveys</a>
     
     <div class="nav-section">Point of Sales</div>

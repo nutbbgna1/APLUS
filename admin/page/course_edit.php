@@ -10,7 +10,7 @@ if ($id) {
     $course = $stmt->fetch();
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['action'])) {
     try {
         $course_code = $_POST['course_code'] ?? '';
         $title = $_POST['title'] ?? '';
@@ -26,15 +26,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Handle Image Upload
         $image_url = $course['image_url'] ?? null;
-        if (isset($_FILES['cover_image']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
-            $ext = pathinfo($_FILES['cover_image']['name'], PATHINFO_EXTENSION);
-            $imgName = 'course_' . time() . '_' . rand(100, 999) . '.' . $ext;
-            $imgPath = __DIR__ . '/../../uploads/courses/' . $imgName;
-            if (!is_dir(__DIR__ . '/../../uploads/courses/')) {
-                mkdir(__DIR__ . '/../../uploads/courses/', 0777, true);
-            }
-            if (move_uploaded_file($_FILES['cover_image']['tmp_name'], $imgPath)) {
-                $image_url = 'uploads/courses/' . $imgName;
+        if (isset($_FILES['cover_image']) && $_FILES['cover_image']['name'] !== '') {
+            if ($_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
+                $ext = pathinfo($_FILES['cover_image']['name'], PATHINFO_EXTENSION);
+                $imgName = 'course_' . time() . '_' . rand(100, 999) . '.' . $ext;
+                $imgPath = __DIR__ . '/../../uploads/courses/' . $imgName;
+                if (!is_dir(__DIR__ . '/../../uploads/courses/')) {
+                    mkdir(__DIR__ . '/../../uploads/courses/', 0777, true);
+                }
+                if (move_uploaded_file($_FILES['cover_image']['tmp_name'], $imgPath)) {
+                    $image_url = 'uploads/courses/' . $imgName;
+                } else {
+                    throw new Exception("อัปโหลดรูปภาพล้มเหลว: ไม่สามารถย้ายไฟล์ไปยัง " . $imgPath);
+                }
+            } else {
+                throw new Exception("เกิดข้อผิดพลาดในการอัปโหลดไฟล์ (Error Code: " . $_FILES['cover_image']['error'] . ") - ไฟล์อาจมีขนาดใหญ่เกินไป หรือระบบขัดข้อง");
             }
         }
 

@@ -22,7 +22,7 @@ $user = $currentUser;
         <div style="text-align: center; margin-bottom: 24px; position: relative;">
             <input type="file" id="profile_pic" name="profile_pic" accept="image/*" style="display: none;" onchange="previewImage(event)">
             <label for="profile_pic" style="cursor: pointer; display: inline-block;">
-                <div id="avatarPreview" style="width: 80px; height: 80px; border-radius: 50%; background: <?= !empty($user['profile_pic']) ? 'url(\'../assets/uploads/profiles/' . htmlspecialchars($user['profile_pic']) . '\') center/cover' : htmlspecialchars($user['avatar_color'] ?? '#E2E8F0') ?>; display: inline-flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 900; color: white; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 3px solid white;">
+                <div id="avatarPreview" style="width: 80px; height: 80px; border-radius: 50%; background: <?= !empty($user['profile_pic']) ? 'url(\'' . SITE_URL . '/assets/uploads/profiles/' . htmlspecialchars($user['profile_pic']) . '\') center/cover' : htmlspecialchars($user['avatar_color'] ?? '#E2E8F0') ?>; display: inline-flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 900; color: white; margin-bottom: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 3px solid white;">
                     <?= empty($user['profile_pic']) ? mb_substr($user['fname'], 0, 1) : '' ?>
                 </div>
                 <div style="color: #4A8CFF; font-weight: 700; font-size: 0.9rem; background: #F1F5F9; padding: 6px 16px; border-radius: 20px; display: inline-block;"><i class="fa-solid fa-camera"></i> Change Avatar</div>

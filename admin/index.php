@@ -4,11 +4,10 @@ require_once __DIR__ . '/config/config.php';
 
 $page = $_GET['page'] ?? 'dashboard';
 
-// Very basic admin auth mockup - normally would check passwords
-$_SESSION['admin_logged_in'] = true; 
-
-if (!isset($_SESSION['admin_logged_in'])) {
-    die("Unauthorized Access");
+// Check if admin is logged in
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header("Location: login.php");
+    exit;
 }
 
 $db = getDB();
@@ -16,7 +15,7 @@ $db = getDB();
 $allowed_pages = [
     'dashboard', 'courses', 'course_edit', 'categories', 'orders', 
     'students', 'pos', 'lessons', 'vocabulary', 
-    'reading', 'minigames', 'exams', 'exam_questions', 'exam_permissions', 'payment_settings', 'api_settings', 'accounting', 'search', 'logout', 'set_lang', 'read_all', 'surveys'
+    'reading', 'minigames', 'exams', 'exam_questions', 'exam_permissions', 'payment_settings', 'api_settings', 'accounting', 'search', 'logout', 'set_lang', 'read_all', 'surveys', 'calendar'
 ];
 
 if (!in_array($page, $allowed_pages)) {

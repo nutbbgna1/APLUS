@@ -110,7 +110,7 @@ if (count($questions) < $exam['total_questions']) {
         .feedback-alert { background: #FEE2E2; border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; color: #DC2626; font-weight: 600; font-size: 1rem; display: none; }
         .feedback-alert.correct { background: #DCFCE7; color: #16A34A; }
         
-        .next-btn { background: var(--primary); color: white; border: none; border-radius: 30px; padding: 18px; font-size: 1.1rem; font-weight: 700; width: 100%; cursor: pointer; display: none; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); transition: transform 0.2s; }
+        .next-btn { background: var(--primary); color: white; border: none; border-radius: 30px; padding: 18px; font-size: 1.1rem; font-weight: 700; width: 100%; cursor: pointer; display: block; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); transition: transform 0.2s; }
         .next-btn:active { transform: scale(0.98); }
         
         .check-btn { background: #E2E8F0; color: #94A3B8; border: none; border-radius: 30px; padding: 18px; font-size: 1.1rem; font-weight: 700; width: 100%; cursor: pointer; display: block; transition: all 0.2s; }
@@ -128,7 +128,14 @@ if (count($questions) < $exam['total_questions']) {
     <div class="progress-container">
         <div class="progress-bar" id="progressBar"></div>
     </div>
-    <div class="progress-text" id="progressText">1/10</div>
+    <div style="display: flex; flex-direction: column; align-items: flex-end;">
+        <div class="progress-text" id="progressText">1/10</div>
+        <?php if ($exam['time_minutes'] > 0): ?>
+            <div id="timerText" style="font-size: 0.9rem; font-weight: 600; color: #EF4444; margin-top: 4px;">
+                <i class="fa-regular fa-clock"></i> <span id="timeRemaining">--:--</span>
+            </div>
+        <?php endif; ?>
+    </div>
 </div>
 
 <div class="content">
@@ -136,7 +143,12 @@ if (count($questions) < $exam['total_questions']) {
         <i class="fa-regular fa-lightbulb"></i>
         <span id="hintText">Question context</span>
     </div>
-    <img id="questionImage" class="question-image" src="" alt="Question Image">
+    
+    <div id="passageBox" style="display: none; background: #F8FAFC; border-left: 4px solid var(--primary); padding: 16px; margin-bottom: 20px; border-radius: 0 8px 8px 0; color: #334155; font-size: 0.95rem; line-height: 1.6;">
+        <!-- Passage or Conversation injected here -->
+    </div>
+    
+    <img id="questionImage" class="question-image" src="" alt="Question Image" onerror="this.style.display='none'">
     <div id="questionText" class="question-text">Loading...</div>
     
     <div class="options-list" id="optionsList">
@@ -145,12 +157,17 @@ if (count($questions) < $exam['total_questions']) {
 </div>
 
 <div class="footer">
-    <div class="feedback-alert" id="feedbackAlert">
-        <i class="fa-solid fa-circle-exclamation"></i>
-        <span id="feedbackText">Correct answer: "Buenos días"</span>
+    <div class="feedback-alert" id="feedbackAlert" style="flex-direction: column; align-items: flex-start;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-circle-exclamation" id="feedbackIcon"></i>
+            <span id="feedbackText">Correct answer: "Buenos días"</span>
+        </div>
+        <div id="feedbackExplanation" style="font-size: 0.95rem; margin-top: 8px; color: #475569; font-weight: 500; display: none; line-height: 1.5;">
+            <!-- Explanation injected here -->
+        </div>
     </div>
     <button class="check-btn" id="checkBtn" onclick="checkAnswer()" disabled>Check</button>
-    <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Next Question <i class="fa-solid fa-arrow-right"></i></button>
+    <button class="next-btn hidden" id="nextBtn" onclick="nextQuestion()">Next Question <i class="fa-solid fa-arrow-right"></i></button>
 </div>
 
 <script>
@@ -159,11 +176,14 @@ const examData = {
     questions: <?= json_encode($questions, JSON_UNESCAPED_UNICODE) ?>
 };
 
+const uploadBaseUrl = "<?= str_replace('/linguamax', '', SITE_URL) ?>/";
+
 let currentQIndex = 0;
 let selectedIndex = -1;
 let isAnswerChecked = false;
 let correctCount = 0;
 let timeSpent = 0;
+const timeLimitSeconds = <?= ($exam['time_minutes'] > 0) ? ($exam['time_minutes'] * 60) : 0 ?>;
 let userAnswers = [];
 
 const letters = ['A', 'B', 'C', 'D'];
@@ -189,9 +209,20 @@ function renderQuestion() {
     
     const questionImage = document.getElementById('questionImage');
     const questionText = document.getElementById('questionText');
+    const passageBox = document.getElementById('passageBox');
+    
+    if (q.passage_text && q.passage_text.trim() !== '') {
+        // Handle both actual newlines and literal \n strings that might have been saved in DB
+        let formattedPassage = q.passage_text.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
+        passageBox.innerHTML = formattedPassage;
+        passageBox.style.display = 'block';
+    } else {
+        passageBox.style.display = 'none';
+        passageBox.innerHTML = '';
+    }
 
     if (q.image_path) {
-        questionImage.src = '../' + q.image_path;
+        questionImage.src = uploadBaseUrl + q.image_path;
         questionImage.style.display = 'block';
     } else {
         questionImage.src = '';
@@ -199,7 +230,8 @@ function renderQuestion() {
     }
 
     if (q.question_text) {
-        questionText.innerHTML = q.question_text.replace(/\n/g, '<br>');
+        let formattedQuestion = q.question_text.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
+        questionText.innerHTML = formattedQuestion;
         questionText.style.display = 'block';
     } else {
         questionText.style.display = 'none';
@@ -262,7 +294,8 @@ function checkAnswer() {
         selectedOpt.classList.add('correct');
         selectedOpt.querySelector('.fa-solid').classList.add('fa-check');
         document.getElementById('feedbackAlert').className = 'feedback-alert correct';
-        document.getElementById('feedbackAlert').innerHTML = `<i class="fa-solid fa-circle-check"></i> <span id="feedbackText">Excellent!</span>`;
+        document.getElementById('feedbackIcon').className = 'fa-solid fa-circle-check';
+        document.getElementById('feedbackText').innerHTML = `Excellent!`;
     } else {
         selectedOpt.classList.add('incorrect');
         selectedOpt.querySelector('.fa-solid').classList.add('fa-xmark');
@@ -270,7 +303,17 @@ function checkAnswer() {
         correctOpt.querySelector('.fa-solid').classList.add('fa-check');
         
         document.getElementById('feedbackAlert').className = 'feedback-alert';
-        document.getElementById('feedbackAlert').innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> <span id="feedbackText">Correct answer: "${q[choiceKeys[q.correct_answer]]}"</span>`;
+        document.getElementById('feedbackIcon').className = 'fa-solid fa-circle-exclamation';
+        document.getElementById('feedbackText').innerHTML = `Correct answer: "${q[choiceKeys[q.correct_answer]]}"`;
+    }
+    
+    // Show explanation if available
+    const explanationEl = document.getElementById('feedbackExplanation');
+    if (q.explanation && q.explanation.trim() !== '') {
+        explanationEl.innerHTML = `<strong>คำอธิบาย:</strong> ${q.explanation}`;
+        explanationEl.style.display = 'block';
+    } else {
+        explanationEl.style.display = 'none';
     }
     
     document.getElementById('feedbackAlert').style.display = 'flex';
@@ -293,8 +336,13 @@ function nextQuestion() {
 async function submitExam() {
     const pct = Math.round((correctCount / examData.questions.length) * 100);
     
+    let apiUrl = '<?= SITE_URL ?>/api/exams.php';
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        apiUrl = '<?= SITE_URL ?>/api/exams';
+    }
+    
     try {
-        const response = await fetch('<?= SITE_URL ?>/api/exams.php', {
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -309,7 +357,7 @@ async function submitExam() {
         });
         const result = await response.json();
         if (result.success) {
-            window.location.href = `?page=exam-result&id=${result.result_id}&score=${correctCount}&total=${examData.questions.length}&pct=${pct}&coins=${result.coins_earned}`;
+            window.location.href = `?page=exam-result&id=${result.result_id}&exam_id=${examData.id}&score=${correctCount}&total=${examData.questions.length}&pct=${pct}&coins=${result.coins_earned}`;
         } else {
             alert('Error submitting exam.');
         }
@@ -325,8 +373,25 @@ function confirmExit() {
 }
 
 // Start timer
-setInterval(() => {
-    if (!isAnswerChecked) timeSpent++;
+const timerInterval = setInterval(() => {
+    if (!isAnswerChecked) {
+        timeSpent++;
+    }
+    
+    if (timeLimitSeconds > 0) {
+        let remaining = timeLimitSeconds - timeSpent;
+        if (remaining <= 0) {
+            remaining = 0;
+            clearInterval(timerInterval);
+            document.getElementById('timeRemaining').textContent = "00:00";
+            alert("หมดเวลาทำข้อสอบแล้ว! ระบบจะส่งคำตอบของคุณอัตโนมัติ");
+            submitExam();
+        } else {
+            const m = Math.floor(remaining / 60).toString().padStart(2, '0');
+            const s = (remaining % 60).toString().padStart(2, '0');
+            document.getElementById('timeRemaining').textContent = `${m}:${s}`;
+        }
+    }
 }, 1000);
 
 // Initialize

@@ -35,7 +35,7 @@ switch ($action) {
                 $ext = pathinfo($_FILES['profile_pic']['name'], PATHINFO_EXTENSION);
                 if (empty($ext)) $ext = 'jpg';
                 $newFilename = 'user_' . $userId . '_' . time() . '.' . $ext;
-                $uploadDir = __DIR__ . '/../../assets/uploads/profiles/';
+                $uploadDir = __DIR__ . '/../assets/uploads/profiles/';
                 
                 if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $uploadDir . $newFilename)) {
                     $profilePicPath = $newFilename;
