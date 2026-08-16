@@ -6,6 +6,7 @@
     
     <div class="nav-section">Main Menu</div>
     <a href="?page=dashboard" class="nav-link <?= $page == 'dashboard' ? 'active' : '' ?>"><i class="fa-solid fa-house"></i> Dashboard</a>
+    <a href="?page=courses" class="nav-link <?= $page == 'courses' || $page == 'course_edit' ? 'active' : '' ?>"><i class="fa-solid fa-book"></i> Courses</a>
     <a href="?page=categories" class="nav-link <?= $page == 'categories' ? 'active' : '' ?>"><i class="fa-solid fa-list"></i> Categories</a>
     <a href="?page=students" class="nav-link <?= $page == 'students' ? 'active' : '' ?>"><i class="fa-solid fa-users"></i> Students</a>
     <a href="?page=calendar" class="nav-link <?= $page == 'calendar' ? 'active' : '' ?>"><i class="fa-regular fa-calendar-days"></i> Calendar / Schedule</a>

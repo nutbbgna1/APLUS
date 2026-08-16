@@ -1,60 +1,45 @@
 <?php
 // ============================================================
-// LinguaMax — Student Classroom
+// LinguaMax — Student Classroom (Course Storefront)
 // ============================================================
 include __DIR__ . '/../../includes/header.php';
 
-// Fetch courses from database
 $db = getDB();
-$stmt = $db->query("SELECT * FROM courses WHERE is_published = 1");
-$coursesDb = $stmt->fetchAll();
-
 $user_id = $_SESSION['user_id'] ?? 1;
-$stmt = $db->prepare("SELECT e.*, c.title, c.instructor, c.image_url, c.category, c.grade_level 
-                      FROM course_enrollments e 
-                      JOIN courses c ON e.course_id = c.id 
-                      WHERE e.user_id = ? AND e.status = 'approved' 
-                      ORDER BY e.approved_at DESC");
+
+// Fetch published courses
+$coursesDb = $db->query("
+    SELECT c.*, 
+           (SELECT COUNT(*) FROM course_episodes WHERE course_id = c.id) as ep_count
+    FROM courses c 
+    WHERE c.is_published = 1 
+    ORDER BY c.id DESC
+")->fetchAll();
+
+// Fetch my approved courses
+$stmt = $db->prepare("
+    SELECT e.course_id, c.title, c.instructor, c.image_url, c.category, c.grade_level,
+           (SELECT COUNT(*) FROM course_episodes WHERE course_id = c.id) as ep_count
+    FROM course_enrollments e 
+    JOIN courses c ON e.course_id = c.id 
+    WHERE e.user_id = ? AND e.status = 'approved' 
+    ORDER BY e.approved_at DESC
+");
 $stmt->execute([$user_id]);
 $myApprovedCourses = $stmt->fetchAll();
 
-$stmt = $db->query("SELECT * FROM course_categories ORDER BY id ASC");
-$catDb = $stmt->fetchAll();
-$categories = [];
-foreach ($catDb as $c) {
-    $categories[] = $c['name'];
-}
+// Fetch categories
+$catDb = $db->query("SELECT * FROM course_categories ORDER BY id ASC")->fetchAll();
+$categories = array_column($catDb, 'name');
 
-$stmt = $db->query("SELECT * FROM course_subcategories");
-$subcatDb = $stmt->fetchAll();
+// Fetch subcategories grouped by category
+$subcatDb = $db->query("SELECT s.*, c.name as cat_name FROM course_subcategories s JOIN course_categories c ON s.category_id = c.id")->fetchAll();
 $subcatsByCat = [];
 foreach ($subcatDb as $s) {
-    // We need category name to map to subcats easily on frontend
-    $cName = '';
-    foreach ($catDb as $c) {
-        if ($c['id'] == $s['category_id']) { $cName = $c['name']; break; }
-    }
-    if ($cName) {
-        $subcatsByCat[$cName][] = $s['name'];
-    }
+    $subcatsByCat[$s['cat_name']][] = $s['name'];
 }
 
 $grades = ['ทั้งหมด', 'ป.4', 'ป.5', 'ป.6', 'ม.1', 'ม.2', 'ม.3', 'ม.4', 'ม.5', 'ม.6'];
-
-$courses = [];
-foreach ($coursesDb as $c) {
-    $courses[] = [
-        'id' => $c['id'],
-        'category' => $c['category'],
-        'sub_category' => $c['sub_category'],
-        'grade_level' => $c['grade_level'] ?: 'ทั้งหมด',
-        'title' => $c['title'],
-        'instructor' => $c['instructor'],
-        'rating' => '4.9',
-        'students' => '12k',
-        'price' => $c['price']
-    ];
-}
 ?>
 
 <div class="animate-fade-in" style="padding: 16px 4px 40px 4px; min-height: 100vh;">
@@ -101,15 +86,16 @@ foreach ($coursesDb as $c) {
                     <?php if ($mc['image_url']): ?>
                         <img src="<?= SITE_URL ?>/../<?= htmlspecialchars($mc['image_url']) ?>" style="width: 100%; height: 100%; object-fit: cover;">
                     <?php else: ?>
-                        <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#94A3B8;"><i class="fa-solid fa-book fa-2x"></i></div>
+                        <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #E0E7FF, #C7D2FE); color: #6366F1; font-size: 2.5rem; font-weight: 900;"><?= mb_substr($mc['category'], 0, 1) ?></div>
                     <?php endif; ?>
-                    <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(255,255,255,0.9); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; color: #16A34A; display: flex; align-items: center; gap: 4px;">
+                    <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(255,255,255,0.95); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; color: #16A34A; display: flex; align-items: center; gap: 4px;">
                         <i class="fa-solid fa-circle-check"></i> เข้าเรียนได้
                     </div>
                 </div>
                 <div style="padding: 16px;">
                     <div style="font-size: 0.75rem; font-weight: 800; color: var(--primary); margin-bottom: 4px;"><?= htmlspecialchars($mc['category']) ?></div>
                     <div style="font-weight: 800; color: #1E293B; font-size: 1.05rem; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><?= htmlspecialchars($mc['title']) ?></div>
+                    <div style="font-size: 0.75rem; color: #94A3B8; font-weight: 600;"><?= $mc['ep_count'] ?> บทเรียน</div>
                 </div>
             </a>
             <?php endforeach; ?>
@@ -134,36 +120,40 @@ foreach ($coursesDb as $c) {
     <!-- Course List -->
     <div style="margin-bottom: 40px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h2 id="course-list-title" style="font-size: 1.15rem; font-weight: 800; color: #1E293B; margin: 0; font-family: var(--font-display);">คอร์สวิทย์</h2>
+            <h2 id="course-list-title" style="font-size: 1.15rem; font-weight: 800; color: #1E293B; margin: 0; font-family: var(--font-display);">คอร์ส<?= !empty($categories) ? $categories[0] : '' ?></h2>
         </div>
         
         <div id="course-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
-            <?php foreach($courses as $course): ?>
-                <a href="?page=classroom-view&id=<?= $course['id'] ?>&title=<?= urlencode($course['title']) ?>&instructor=<?= urlencode($course['instructor']) ?>&subject=<?= urlencode($course['category']) ?>" 
+            <?php foreach($coursesDb as $c): ?>
+                <a href="?page=classroom-view&id=<?= $c['id'] ?>" 
                    class="course-card" 
-                   data-category="<?= htmlspecialchars($course['category']) ?>" 
-                   data-subcategory="<?= htmlspecialchars($course['sub_category']) ?>" 
-                   data-grade="<?= htmlspecialchars($course['grade_level']) ?>"
-                   data-title="<?= htmlspecialchars(strtolower($course['title'])) ?>"
-                   style="text-decoration: none; color: inherit; background: var(--surface); border-radius: 20px; padding: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); transition: var(--transition); cursor: pointer; display: none;">
+                   data-category="<?= htmlspecialchars($c['category']) ?>" 
+                   data-subcategory="<?= htmlspecialchars($c['sub_category']) ?>" 
+                   data-grade="<?= htmlspecialchars($c['grade_level'] ?: 'ทั้งหมด') ?>"
+                   data-title="<?= htmlspecialchars(strtolower($c['title'])) ?>"
+                   style="text-decoration: none; color: inherit; background: var(--surface); border-radius: 20px; box-shadow: var(--shadow); border: 1px solid var(--border); transition: var(--transition); cursor: pointer; display: none; overflow: hidden;">
                    
-                    <div style="background: var(--primary-light); border-radius: 16px; width: 100%; height: 140px; margin-bottom: 16px; display:flex; align-items:center; justify-content:center; color:white; font-size:3.5rem; font-family: var(--font-display); font-weight:900;">
-                        <?= mb_substr($course['category'], 0, 1) ?>
-                    </div>
-                    
-                    <div style="position: absolute; margin-top: -55px; margin-left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
-                        <?= $course['grade_level'] ?>
-                    </div>
-                    
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                        <div style="font-weight: 800; font-size: 1.05rem; color: var(--text); font-family: var(--font-display);"><?= htmlspecialchars($course['title']) ?></div>
-                        <div style="display: flex; align-items: center; gap: 4px; font-size: 0.85rem; font-weight: 700; color: var(--text-secondary);">
-                            <i class="fa-solid fa-star" style="color: var(--warning);"></i> <?= $course['rating'] ?>
+                    <!-- Course Image -->
+                    <div style="width: 100%; height: 150px; background: linear-gradient(135deg, #E0E7FF, #C7D2FE); position: relative;">
+                        <?php if ($c['image_url']): ?>
+                            <img src="<?= SITE_URL ?>/../<?= htmlspecialchars($c['image_url']) ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                        <?php else: ?>
+                            <div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color: #6366F1; font-size: 3rem; font-weight: 900; font-family: var(--font-display);"><?= mb_substr($c['category'], 0, 1) ?></div>
+                        <?php endif; ?>
+                        <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.65); color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700;">
+                            <?= htmlspecialchars($c['grade_level'] ?: 'ทั้งหมด') ?>
+                        </div>
+                        <div style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.65); color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700;">
+                            <?= $c['ep_count'] ?> EP
                         </div>
                     </div>
-                    <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 16px;">By <?= htmlspecialchars($course['instructor']) ?></div>
-                    <div style="display: flex; justify-content: flex-end; align-items: center;">
-                        <div style="font-weight: 800; font-size: 1.15rem; color: var(--primary); font-family: var(--font-display);">฿<?= number_format($course['price']) ?></div>
+                    
+                    <div style="padding: 16px;">
+                        <div style="font-weight: 800; font-size: 1.05rem; color: var(--text); font-family: var(--font-display); margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"><?= htmlspecialchars($c['title']) ?></div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 12px;">By <?= htmlspecialchars($c['instructor']) ?></div>
+                        <div style="display: flex; justify-content: flex-end; align-items: center;">
+                            <div style="font-weight: 800; font-size: 1.15rem; color: var(--primary); font-family: var(--font-display);">฿<?= number_format($c['price']) ?></div>
+                        </div>
                     </div>
                 </a>
             <?php endforeach; ?>
@@ -204,7 +194,7 @@ div[style*="overflow-x: auto"] { -ms-overflow-style: none; scrollbar-width: none
 
 <script>
 const subcatsByCat = <?= json_encode($subcatsByCat) ?>;
-let currentCategory = '<?= !empty($categories) ? $categories[0] : '' ?>';
+let currentCategory = '<?= !empty($categories) ? addslashes($categories[0]) : '' ?>';
 
 function updateSubcatDropdown() {
     const subSelect = document.getElementById('subcatFilter');
@@ -222,17 +212,11 @@ function updateSubcatDropdown() {
 function selectCategory(categoryName) {
     currentCategory = categoryName;
     
-    // Update active tab styling
     const tabs = document.querySelectorAll('.category-tab');
     tabs.forEach(tab => {
-        if(tab.getAttribute('data-category') === categoryName) {
-            tab.classList.add('active');
-        } else {
-            tab.classList.remove('active');
-        }
+        tab.classList.toggle('active', tab.getAttribute('data-category') === categoryName);
     });
 
-    // Update section title
     document.getElementById('course-list-title').innerText = 'คอร์ส' + categoryName;
     
     updateSubcatDropdown();
@@ -241,6 +225,7 @@ function selectCategory(categoryName) {
 
 function filterCourses() {
     const selectedGrade = document.getElementById('gradeFilter').value;
+    const selectedSubcat = document.getElementById('subcatFilter').value;
     const searchQuery = document.getElementById('searchInput').value.toLowerCase();
     const courses = document.querySelectorAll('.course-card');
     let visibleCount = 0;
@@ -251,18 +236,9 @@ function filterCourses() {
         const grade = course.getAttribute('data-grade');
         const title = course.getAttribute('data-title');
         
-        const selectedSubcat = document.getElementById('subcatFilter').value;
-        
-        // Check category match
         const matchCat = (cat === currentCategory);
-        
         const matchSubcat = (selectedSubcat === 'ทั้งหมด' || subcat === selectedSubcat);
-        
-        // Check grade match ('ทั้งหมด' in filter means show all grades for that cat. 
-        // If course has 'ทั้งหมด', it should appear in all grade filters)
         const matchGrade = (selectedGrade === 'ทั้งหมด' || grade === 'ทั้งหมด' || grade === selectedGrade);
-        
-        // Check search match
         const matchSearch = title.includes(searchQuery);
         
         if (matchCat && matchSubcat && matchGrade && matchSearch) {
@@ -277,7 +253,6 @@ function filterCourses() {
     document.getElementById('no-results').style.display = visibleCount === 0 ? 'block' : 'none';
 }
 
-// Initial filter call on page load
 window.onload = function() {
     updateSubcatDropdown();
     filterCourses();
