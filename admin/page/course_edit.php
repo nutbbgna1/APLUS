@@ -51,7 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_action'] ?? '') === '
                 throw new Exception("ไฟล์ต้นฉบับต้องมีขนาดไม่เกิน 2MB");
             }
 
-            $imgName = 'course_' . time() . '_' . rand(100,999) . '.webp'; // Convert all to webp for best compression
+            // Keep the original extension to avoid mime-type mismatch on fallback
+            $imgName = 'course_' . time() . '_' . rand(100,999) . '.' . $ext;
             $uploadDir = __DIR__ . '/../../uploads/courses/';
             if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
             
@@ -64,13 +65,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_action'] ?? '') === '
             list($origWidth, $origHeight, $imageType) = $imageInfo;
             
             $sourceImage = null;
-            switch ($imageType) {
-                case IMAGETYPE_JPEG: $sourceImage = @imagecreatefromjpeg($tmpPath); break;
-                case IMAGETYPE_PNG:  $sourceImage = @imagecreatefrompng($tmpPath); break;
-                case IMAGETYPE_WEBP: $sourceImage = @imagecreatefromwebp($tmpPath); break;
-                case IMAGETYPE_GIF:  $sourceImage = @imagecreatefromgif($tmpPath); break;
+            if (function_exists('imagecreatefromjpeg')) {
+                switch ($imageType) {
+                    case IMAGETYPE_JPEG: $sourceImage = @imagecreatefromjpeg($tmpPath); break;
+                    case IMAGETYPE_PNG:  $sourceImage = @imagecreatefrompng($tmpPath); break;
+                    case IMAGETYPE_WEBP: $sourceImage = @imagecreatefromwebp($tmpPath); break;
+                    case IMAGETYPE_GIF:  $sourceImage = @imagecreatefromgif($tmpPath); break;
+                }
             }
             
+            $gdSuccess = false;
             if ($sourceImage) {
                 // Resize if width or height > 1000px
                 $maxWidth = 1000;
@@ -96,22 +100,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_action'] ?? '') === '
                 
                 imagecopyresampled($newImage, $sourceImage, 0, 0, 0, 0, $newWidth, $newHeight, $origWidth, $origHeight);
                 
-                // Save as WEBP with 75% quality (usually < 100KB for 1000px)
-                imagewebp($newImage, $targetPath, 75);
+                // Save compressed image based on original type
+                switch ($imageType) {
+                    case IMAGETYPE_JPEG: $gdSuccess = @imagejpeg($newImage, $targetPath, 75); break;
+                    case IMAGETYPE_PNG:  $gdSuccess = @imagepng($newImage, $targetPath, 6); break;
+                    case IMAGETYPE_WEBP: $gdSuccess = @imagewebp($newImage, $targetPath, 75); break;
+                    case IMAGETYPE_GIF:  $gdSuccess = @imagegif($newImage, $targetPath); break;
+                }
                 
                 imagedestroy($sourceImage);
                 imagedestroy($newImage);
-                
-                // If it somehow exceeds 300KB, compress further
-                if (filesize($targetPath) > 300 * 1024) {
-                    $tempImg = @imagecreatefromwebp($targetPath);
-                    if ($tempImg) {
-                        imagewebp($tempImg, $targetPath, 50); // Aggressive compression
-                        imagedestroy($tempImg);
-                    }
-                }
-            } else {
-                // Fallback if GD is not available or fails
+            }
+            
+            // Fallback if GD is not available or saving failed
+            if (!$gdSuccess) {
                 if (!move_uploaded_file($tmpPath, $targetPath)) {
                     throw new Exception("ไม่สามารถบันทึกรูปภาพได้");
                 }
