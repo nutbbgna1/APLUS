@@ -37,30 +37,18 @@ if (!$stmt->fetch()) {
 // Get the relative file path from DB
 $rel_path = $mat['file_url']; // e.g., "uploads/courses/materials/mat_123.pdf"
 
-// Try multiple possible physical locations to find the file
-$possible_paths = [
-    // 1. New location: inside linguamax/uploads/
-    __DIR__ . '/../../' . $rel_path,
-    
-    // 2. Old location: in the root English_web/uploads/
-    __DIR__ . '/../../../' . $rel_path,
-    
-    // 3. Fallback absolute paths based on typical setup
-    $_SERVER['DOCUMENT_ROOT'] . '/' . $rel_path,
-    $_SERVER['DOCUMENT_ROOT'] . '/linguamax/' . $rel_path
-];
+// Secure physical path inside linguamax
+$file_to_serve = __DIR__ . '/../../' . $rel_path;
+// Normalize the path to prevent directory traversal
+$file_to_serve = realpath($file_to_serve);
 
-$file_to_serve = null;
-foreach ($possible_paths as $path) {
-    if (file_exists($path) && is_file($path)) {
-        $file_to_serve = $path;
-        break;
-    }
+// Ensure the file is inside the linguamax directory
+$base_dir = realpath(__DIR__ . '/../../');
+if (!$file_to_serve || strpos($file_to_serve, $base_dir) !== 0 || !file_exists($file_to_serve)) {
+    die("Error: File not found. Please contact the administrator to re-upload this document.");
 }
 
-if (!$file_to_serve) {
-    die("Error: File physically not found on the server. Please contact the administrator to re-upload it.");
-}
+
 
 // Force the download
 $file_name = preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $mat['title']) . '.pdf';
