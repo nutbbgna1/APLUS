@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_action'] ?? '') === '
 
             // Keep the original extension to avoid mime-type mismatch on fallback
             $imgName = 'course_' . time() . '_' . rand(100,999) . '.' . $ext;
-            $uploadDir = __DIR__ . '/../../uploads/courses/';
+            $uploadDir = __DIR__ . '/../../linguamax/uploads/courses/';
             if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
             
             $tmpPath = $_FILES['cover_image']['tmp_name'];
@@ -192,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['form_action'] ?? '') === '
             }
             $ext = strtolower(pathinfo($_FILES['mat_file']['name'], PATHINFO_EXTENSION));
             $docName = 'mat_' . time() . '_' . rand(100,999) . '.' . $ext;
-            $matDir = __DIR__ . '/../../uploads/courses/materials/';
+            $matDir = __DIR__ . '/../../linguamax/uploads/courses/materials/';
             if (!is_dir($matDir)) mkdir($matDir, 0777, true);
             if (!move_uploaded_file($_FILES['mat_file']['tmp_name'], $matDir . $docName)) {
                 throw new Exception("ไม่สามารถบันทึกเอกสารได้");
@@ -395,8 +395,8 @@ $grades = ['ทั้งหมด', 'ป.4', 'ป.5', 'ป.6', 'ม.1', 'ม.2',
         <div style="margin-bottom: 20px;">
             <label style="display: block; font-weight: 700; font-size: 0.85rem; color: #334155; margin-bottom: 6px;">รูปปกคอร์ส (JPG, PNG, WEBP — ไม่เกิน 2MB)</label>
             <div style="display: flex; align-items: center; gap: 16px;">
-                <?php if ($course && $course['image_url']): ?>
-                    <img src="<?= htmlspecialchars($course['image_url']) ?>" style="width: 80px; height: 80px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border);">
+                <?php if (!empty($course['image_url'])): ?>
+                    <img src="../linguamax/<?= htmlspecialchars($course['image_url']) ?>" style="width: 80px; height: 80px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border);">
                 <?php endif; ?>
                 <input type="file" name="cover_image" accept="image/jpeg,image/png,image/webp,image/gif" style="padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: #F8FAFC; font-size: 0.85rem; flex: 1;">
             </div>

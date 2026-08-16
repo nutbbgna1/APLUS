@@ -87,7 +87,7 @@ $courses = $db->query("
                 <td style="padding: 14px 16px;">
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <?php if ($c['image_url']): ?>
-                            <img src="<?= htmlspecialchars($c['image_url']) ?>" style="width: 48px; height: 48px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border);">
+                            <img src="../linguamax/<?= htmlspecialchars($c['image_url']) ?>" style="width: 48px; height: 48px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border);">
                         <?php else: ?>
                             <div style="width: 48px; height: 48px; border-radius: 8px; background: linear-gradient(135deg, #E0E7FF, #C7D2FE); display: flex; align-items: center; justify-content: center; color: #6366F1; font-weight: 800; font-size: 0.9rem;"><?= mb_substr($c['category'], 0, 1) ?></div>
                         <?php endif; ?>

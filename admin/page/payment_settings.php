@@ -30,17 +30,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Handle QR Image upload
             $qr_code_image = $_POST['existing_image'] ?? '';
             if (isset($_FILES['qr_code']) && $_FILES['qr_code']['error'] === UPLOAD_ERR_OK) {
-                $ext = pathinfo($_FILES['qr_code']['name'], PATHINFO_EXTENSION);
-                $fileName = 'qr_' . time() . '_' . rand(100, 999) . '.' . $ext;
+                $ext = strtolower(pathinfo($_FILES['qr_code']['name'], PATHINFO_EXTENSION));
+                $qrName = 'qr_' . time() . '_' . rand(100,999) . '.' . $ext;
+                $uploadDir = __DIR__ . '/../../linguamax/uploads/qr_codes/';
+                if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+                if (!move_uploaded_file($_FILES['qr_code']['tmp_name'], $uploadDir . $qrName)) {
+                    throw new Exception("ไม่สามารถบันทึกรูปภาพ QR Code ได้");
+                }
+                $qr_code_image = 'linguamax/uploads/qr_codes/' . $qrName;
                 
-                if (move_uploaded_file($_FILES['qr_code']['tmp_name'], $uploadDir . $fileName)) {
-                    $qr_code_image = 'admin/uploads/payments/' . $fileName;
-                    
-                    // delete old if editing
-                    if ($action === 'edit' && !empty($_POST['existing_image'])) {
-                        $oldFile = __DIR__ . '/../../' . $_POST['existing_image'];
-                        if (file_exists($oldFile)) unlink($oldFile);
-                    }
+                // delete old if editing
+                if ($action === 'edit' && !empty($_POST['existing_image'])) {
+                    $oldFile = __DIR__ . '/../../' . $_POST['existing_image'];
+                    if (file_exists($oldFile)) unlink($oldFile);
                 }
             }
             
